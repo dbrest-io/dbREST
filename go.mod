@@ -1,4 +1,4 @@
-module github.com/flarco/dbrest
+module github.com/dbrest-io/dbrest
 
 go 1.19
 
