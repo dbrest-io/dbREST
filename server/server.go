@@ -6,6 +6,7 @@ import (
 
 	"github.com/flarco/g"
 	"github.com/labstack/echo/v5"
+	"github.com/labstack/echo/v5/middleware"
 )
 
 // Server is the main server
@@ -21,6 +22,8 @@ func NewServer() (s *Server) {
 
 	// add routes
 	for _, route := range standardRoutes {
+		route.Middlewares = append(route.Middlewares, middleware.Logger())
+		route.Middlewares = append(route.Middlewares, middleware.Recover())
 		s.EchoServer.AddRoute(route)
 	}
 	return

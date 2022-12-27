@@ -3,9 +3,12 @@ module github.com/dbrest-io/dbrest
 go 1.19
 
 require (
-	github.com/flarco/dbio v0.3.168
+	github.com/flarco/dbio v0.3.169
 	github.com/flarco/g v0.1.51
+	github.com/json-iterator/go v1.1.12
 	github.com/labstack/echo/v5 v5.0.0-20220201181537-ed2888cfa198
+	github.com/samber/lo v1.25.0
+	github.com/spf13/cast v1.5.0
 )
 
 require (
@@ -102,7 +105,6 @@ require (
 	github.com/jinzhu/now v1.1.4 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/jmoiron/sqlx v1.2.0 // indirect
-	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.15.11 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/labstack/echo/v4 v4.1.17 // indirect
@@ -131,13 +133,11 @@ require (
 	github.com/psanford/sqlite3vfs v0.0.0-20220823065410-bd28ac7ee3c2 // indirect
 	github.com/psanford/sqlite3vfshttp v0.0.0-20220827153928-a19f096e6eb4 // indirect
 	github.com/rs/zerolog v1.20.0 // indirect
-	github.com/samber/lo v1.25.0 // indirect
 	github.com/satori/go.uuid v1.2.0 // indirect
 	github.com/shirou/gopsutil/v3 v3.22.7 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/snowflakedb/gosnowflake v1.6.15 // indirect
-	github.com/spf13/cast v1.5.0 // indirect
 	github.com/stretchr/testify v1.8.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.10 // indirect
 	github.com/tklauser/numcpus v0.4.0 // indirect
@@ -158,6 +158,7 @@ require (
 	golang.org/x/sys v0.3.0 // indirect
 	golang.org/x/term v0.3.0 // indirect
 	golang.org/x/text v0.5.0 // indirect
+	golang.org/x/time v0.0.0-20220609170525-579cf78fd858 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/api v0.92.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect

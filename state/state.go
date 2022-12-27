@@ -16,6 +16,7 @@ import (
 var (
 	// Connections is all connections
 	Connections = map[string]*Connection{}
+	Queries     = map[string]*Query{}
 	// Queries     = map[string]*store.Query{}
 	// Jobs        = map[string]*store.Job{}
 	// Sync syncs to store
@@ -40,6 +41,9 @@ func init() {
 	// other sources of creds
 	env.SetHomeDir("sling") // https://github.com/slingdata-io/sling
 	env.SetHomeDir("dbnet") // https://github.com/dbnet-io/dbnet
+
+	// load first time
+	LoadConnections()
 }
 
 // Connection is a connection

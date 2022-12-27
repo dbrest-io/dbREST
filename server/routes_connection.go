@@ -12,7 +12,12 @@ import (
 )
 
 func getConnections(c echo.Context) (err error) {
-	resp := NewResponse(c)
+	req := NewRequest(c)
+	resp := NewResponse(req)
+
+	if err = req.Validate(); err != nil {
+		return ErrJSON(http.StatusBadRequest, err, "invalid request")
+	}
 
 	// load fresh connections
 	state.LoadConnections()
@@ -41,10 +46,10 @@ func getConnections(c echo.Context) (err error) {
 
 func getConnectionDatabases(c echo.Context) (err error) {
 	req := NewRequest(c)
-	resp := NewResponse(c)
+	resp := NewResponse(req)
 
 	if err = req.Validate(reqCheckConnection); err != nil {
-		return g.ErrJSON(http.StatusBadRequest, err, "invalid request")
+		return ErrJSON(http.StatusBadRequest, err, "invalid request")
 	}
 
 	rf := func(c database.Connection, req Request) (data iop.Dataset, err error) {
@@ -53,7 +58,7 @@ func getConnectionDatabases(c echo.Context) (err error) {
 
 	resp.data, err = ProcessRequest(req, rf)
 	if err != nil {
-		return g.ErrJSON(http.StatusInternalServerError, err, "could not get databases")
+		return ErrJSON(http.StatusInternalServerError, err, "could not get databases")
 	}
 
 	resp.data.Sort(0, true)
@@ -63,10 +68,10 @@ func getConnectionDatabases(c echo.Context) (err error) {
 
 func getConnectionSchemas(c echo.Context) (err error) {
 	req := NewRequest(c)
-	resp := NewResponse(c)
+	resp := NewResponse(req)
 
 	if err = req.Validate(reqCheckConnection); err != nil {
-		return g.ErrJSON(http.StatusBadRequest, err, "invalid request")
+		return ErrJSON(http.StatusBadRequest, err, "invalid request")
 	}
 
 	rf := func(c database.Connection, req Request) (data iop.Dataset, err error) {
@@ -75,7 +80,7 @@ func getConnectionSchemas(c echo.Context) (err error) {
 
 	resp.data, err = ProcessRequest(req, rf)
 	if err != nil {
-		return g.ErrJSON(http.StatusInternalServerError, err, "could not get schemas")
+		return ErrJSON(http.StatusInternalServerError, err, "could not get schemas")
 	}
 
 	resp.data.Sort(0, true)
@@ -87,12 +92,12 @@ func getConnectionTables(c echo.Context) (err error) {
 	req := NewRequest(c)
 
 	if err = req.Validate(reqCheckConnection); err != nil {
-		return g.ErrJSON(http.StatusBadRequest, err, "invalid request")
+		return ErrJSON(http.StatusBadRequest, err, "invalid request")
 	}
 
 	resp, err := getSchemataTables(req)
 	if err != nil {
-		return g.ErrJSON(http.StatusInternalServerError, err, "could not get tables")
+		return ErrJSON(http.StatusInternalServerError, err, "could not get tables")
 	}
 
 	return resp.Make()
@@ -102,12 +107,12 @@ func getConnectionColumns(c echo.Context) (err error) {
 	req := NewRequest(c)
 
 	if err = req.Validate(reqCheckConnection); err != nil {
-		return g.ErrJSON(http.StatusBadRequest, err, "invalid request")
+		return ErrJSON(http.StatusBadRequest, err, "invalid request")
 	}
 
 	resp, err := getSchemataColumns(req)
 	if err != nil {
-		return g.ErrJSON(http.StatusInternalServerError, err, "could not get columns")
+		return ErrJSON(http.StatusInternalServerError, err, "could not get columns")
 	}
 
 	return resp.Make()
@@ -117,12 +122,12 @@ func getSchemaTables(c echo.Context) (err error) {
 	req := NewRequest(c)
 
 	if err = req.Validate(reqCheckConnection, reqCheckSchema); err != nil {
-		return g.ErrJSON(http.StatusBadRequest, err, "invalid request")
+		return ErrJSON(http.StatusBadRequest, err, "invalid request")
 	}
 
 	resp, err := getSchemataTables(req)
 	if err != nil {
-		return g.ErrJSON(http.StatusInternalServerError, err, "could not get tables")
+		return ErrJSON(http.StatusInternalServerError, err, "could not get tables")
 	}
 
 	return resp.Make()
@@ -132,19 +137,19 @@ func getSchemaColumns(c echo.Context) (err error) {
 	req := NewRequest(c)
 
 	if err = req.Validate(reqCheckConnection, reqCheckSchema); err != nil {
-		return g.ErrJSON(http.StatusBadRequest, err, "invalid request")
+		return ErrJSON(http.StatusBadRequest, err, "invalid request")
 	}
 
 	resp, err := getSchemataColumns(req)
 	if err != nil {
-		return g.ErrJSON(http.StatusInternalServerError, err, "could not get columns")
+		return ErrJSON(http.StatusInternalServerError, err, "could not get columns")
 	}
 
 	return resp.Make()
 }
 
 func getSchemataTables(req Request) (resp Response, err error) {
-	resp = NewResponse(req.ec)
+	resp = NewResponse(req)
 
 	rf := func(c database.Connection, req Request) (data iop.Dataset, err error) {
 		schemata, err := c.GetSchemata(req.Schema)
@@ -189,7 +194,7 @@ func getSchemataTables(req Request) (resp Response, err error) {
 
 func getSchemataColumns(req Request) (resp Response, err error) {
 
-	resp = NewResponse(req.ec)
+	resp = NewResponse(req)
 
 	rf := func(c database.Connection, req Request) (data iop.Dataset, err error) {
 		schemata, err := c.GetSchemata(req.Schema, req.Table)

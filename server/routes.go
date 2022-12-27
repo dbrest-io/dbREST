@@ -7,6 +7,7 @@ import (
 
 	"github.com/dbrest-io/dbrest/state"
 	"github.com/flarco/dbio/database"
+	"github.com/flarco/dbio/filesys"
 	"github.com/flarco/dbio/iop"
 	"github.com/flarco/g"
 	"github.com/flarco/g/csv"
@@ -21,7 +22,7 @@ var json = jsoniter.ConfigCompatibleWithStandardLibrary
 var standardRoutes = []echo.Route{
 	{
 		Method:  "GET",
-		Path:    "/status",
+		Path:    "/.status",
 		Handler: getStatus,
 	},
 	{
@@ -56,7 +57,12 @@ var standardRoutes = []echo.Route{
 	},
 	{
 		Method:  "POST",
-		Path:    "/:connection/.cancel",
+		Path:    "/:connection/.sql/:id",
+		Handler: postConnectionSQL,
+	},
+	{
+		Method:  "POST",
+		Path:    "/:connection/.cancel/:id",
 		Handler: postConnectionCancel,
 	},
 	{
@@ -105,16 +111,20 @@ func getStatus(c echo.Context) (err error) { return c.String(http.StatusOK, "OK"
 
 // Request is the typical request struct
 type Request struct {
-	Name        string            `json:"name" query:"name"`
-	Connection  string            `json:"connection" query:"connection"`
-	Database    string            `json:"database" query:"database"`
-	Schema      string            `json:"schema" query:"schema"`
-	Table       string            `json:"table" query:"table"`
-	Query       string            `json:"query" query:"query"`
-	Procedure   string            `json:"procedure" query:"procedure"`
-	Data        any               `json:"data" query:"data"`
+	ID         string `json:"id" query:"id"` // used for query ID
+	Name       string `json:"name" query:"name"`
+	Connection string `json:"connection" query:"connection"`
+	Database   string `json:"database" query:"database"`
+	Schema     string `json:"schema" query:"schema"`
+	Table      string `json:"table" query:"table"`
+	Query      string `json:"query" query:"query"`
+	Procedure  string `json:"procedure" query:"procedure"`
+	Data       any    `json:"data" query:"data"`
+
+	Header      http.Header       `json:"-" query:"-"`
+	dbTable     database.Table    `json:"-" query:"-"`
 	Permissions state.Permissions `json:"-" query:"-"`
-	ec          echo.Context      `json:"-" query:"-"`
+	echoCtx     echo.Context      `json:"-" query:"-"`
 }
 
 func NewRequest(c echo.Context) Request {
@@ -124,19 +134,33 @@ func NewRequest(c echo.Context) Request {
 		"*": state.PermissionReadWrite,
 	} // TODO: generate permission map
 
-	req := Request{ec: c, Permissions: perms}
+	req := Request{
+		ID:          c.PathParam("id"),
+		Connection:  strings.ToUpper(c.PathParam("connection")),
+		Schema:      c.PathParam("schema"),
+		Table:       c.PathParam("table"),
+		Database:    c.QueryParam("database"),
+		echoCtx:     c,
+		Header:      c.Request().Header,
+		Permissions: perms,
+	}
 
-	req.Connection = strings.ToUpper(c.PathParam("connection"))
-	req.Schema = c.PathParam("schema")
-	req.Table = c.PathParam("table")
+	req.ID = lo.Ternary(req.ID == "", c.QueryParam("id"), req.ID)
+	req.Schema = lo.Ternary(req.Schema == "", c.QueryParam("schema"), req.Schema)
 
 	// parse table name
 	conn, err := state.GetConnObject(req.Connection, "")
-	if err != nil && req.Schema != "" {
-		fullName := req.Schema + "." + req.Table
-		table, _ := database.ParseTableName(fullName, conn.Type)
-		req.Schema = table.Schema
-		req.Table = table.Name
+	if err == nil && req.Schema != "" {
+		if req.Table != "" {
+			fullName := req.Schema + "." + req.Table
+			req.dbTable, _ = database.ParseTableName(fullName, conn.Type)
+			req.Schema = req.dbTable.Schema
+			req.Table = req.dbTable.Name
+		} else {
+			fullName := req.Schema + ".*"
+			t, _ := database.ParseTableName(fullName, conn.Type)
+			req.Schema = t.Schema
+		}
 	}
 
 	return req
@@ -145,6 +169,7 @@ func NewRequest(c echo.Context) Request {
 type requestCheck string
 
 const (
+	reqCheckID         requestCheck = "id"
 	reqCheckName       requestCheck = "name"
 	reqCheckConnection requestCheck = "connection"
 	reqCheckDatabase   requestCheck = "database"
@@ -201,6 +226,80 @@ func (r *Request) CanWrite(table database.Table) bool {
 	return false
 }
 
+func (req *Request) GetDatastream() (ds *iop.Datastream, err error) {
+	ctx := req.echoCtx.Request().Context()
+
+	cfg := map[string]string{} // TODO: set input config
+	ds = iop.NewDatastreamContext(ctx, nil)
+	ds.SafeInference = true
+	ds.SetConfig(cfg)
+
+	contentType := strings.ToLower(req.Header.Get(echo.HeaderContentType))
+	reader := req.echoCtx.Request().Body
+
+	switch contentType {
+	case "multipart/form-data":
+		reader, err = req.GetFileUpload()
+		if err != nil {
+			err = g.Error(err, "could not get file reader")
+			return
+		}
+
+		ft, reader, err := filesys.PeekFileType(reader)
+		if err != nil {
+			err = g.Error(err, "could not peek file reader")
+			return ds, err
+		}
+
+		switch ft {
+		case filesys.FileTypeCsv:
+			err = ds.ConsumeCsvReader(reader)
+		case filesys.FileTypeXml:
+			err = ds.ConsumeXmlReader(reader)
+		case filesys.FileTypeJson:
+			err = ds.ConsumeJsonReader(reader)
+		}
+		if err != nil {
+			err = g.Error(err, "could not consume reader")
+			return ds, err
+		}
+	case "text/plain", "text/csv":
+		err = ds.ConsumeCsvReader(reader)
+	case "application/xml":
+		err = ds.ConsumeXmlReader(reader)
+	default:
+		err = ds.ConsumeJsonReader(reader)
+	}
+	if err != nil {
+		err = g.Error(err, "could not consume reader")
+		return
+	}
+
+	err = ds.WaitReady()
+	if err != nil {
+		err = g.Error(err, "error waiting for datastream")
+		return
+	}
+
+	return
+}
+
+func (r *Request) GetFileUpload() (src io.ReadCloser, err error) {
+	file, err := r.echoCtx.FormFile("file")
+	if err != nil {
+		err = g.Error(err, "could not open form file")
+		return
+	}
+
+	src, err = file.Open()
+	if err != nil {
+		err = g.Error(err, "could not open file")
+		return
+	}
+
+	return
+}
+
 func (r *Request) Validate(checks ...requestCheck) (err error) {
 	eG := g.ErrorGroup{}
 	for _, check := range checks {
@@ -225,6 +324,10 @@ func (r *Request) Validate(checks ...requestCheck) (err error) {
 			if cast.ToString(r.Table) == "" {
 				eG.Add(g.Error("missing request value for: table"))
 			}
+		case reqCheckID:
+			if r.ID == "" {
+				eG.Add(g.Error("missing request value for: id"))
+			}
 		case reqCheckQuery:
 			if cast.ToString(r.Query) == "" {
 				eG.Add(g.Error("missing request value for: query"))
@@ -245,30 +348,36 @@ func (r *Request) Validate(checks ...requestCheck) (err error) {
 }
 
 type Response struct {
-	Error string          `json:"error,omitempty"`
-	ds    *iop.Datastream `json:"-"`
-	data  iop.Dataset     `json:"-"`
-	ec    echo.Context    `json:"-" query:"-"`
+	Request Request         `json:"-"`
+	Error   string          `json:"error,omitempty"`
+	Payload map[string]any  `json:"-"`
+	Status  int             `json:"-"`
+	ds      *iop.Datastream `json:"-"`
+	data    iop.Dataset     `json:"-"`
+	ec      echo.Context    `json:"-" query:"-"`
 }
 
-func NewResponse(c echo.Context) Response {
-	return Response{ec: c}
+func NewResponse(req Request) Response {
+	return Response{Request: req, ec: req.echoCtx, Status: 200}
 }
 
-func (r *Response) MakeStreaming(c echo.Context) (err error) {
+func (r *Response) MakeStreaming() (err error) {
+	if r.Request.ID != "" {
+		r.ec.Response().Header().Set("dbREST-Request-ID", r.Request.ID)
+	}
 
 	if r.ds == nil {
-		return c.String(http.StatusOK, "")
+		return r.ec.String(http.StatusOK, "")
 	}
 	////////////////////
 
-	respW := c.Response().Writer
+	respW := r.ec.Response().Writer
 	var pushRow func(row []interface{})
 
 	fields := r.ds.Columns.Names()
-	contentType := strings.ToLower(c.Request().Header.Get(echo.HeaderContentType))
+	acceptType := strings.ToLower(r.ec.Request().Header.Get(echo.HeaderAccept))
 
-	switch contentType {
+	switch acceptType {
 	case "text/plain", "text/csv":
 		csvW := csv.NewWriter(respW)
 
@@ -285,7 +394,7 @@ func (r *Response) MakeStreaming(c echo.Context) (err error) {
 			csvW.Flush()
 		}
 
-		c.Response().Header().Set(echo.HeaderContentType, "text/csv")
+		r.ec.Response().Header().Set(echo.HeaderContentType, "text/csv")
 	default:
 		enc := json.NewEncoder(respW)
 		pushRow = func(row []interface{}) {
@@ -299,17 +408,17 @@ func (r *Response) MakeStreaming(c echo.Context) (err error) {
 			return g.M("name", c.Name, "type", c.Type, "dbType", c.DbType)
 		})
 		pushRow(columnsI) // first row is columns
-		c.Response().Flush()
+		r.ec.Response().Flush()
 
-		c.Response().Header().Set(echo.HeaderContentType, "application/json")
+		r.ec.Response().Header().Set(echo.HeaderContentType, "application/json")
 	}
 
 	// write headers
-	c.Response().Header().Set("Transfer-Encoding", "chunked")
-	c.Response().WriteHeader(http.StatusOK)
-	c.Response().Flush()
+	r.ec.Response().Header().Set("Transfer-Encoding", "chunked")
+	r.ec.Response().WriteHeader(r.Status)
+	r.ec.Response().Flush()
 
-	ctx := c.Request().Context()
+	ctx := r.ec.Request().Context()
 	for row := range r.ds.Rows {
 
 		select {
@@ -318,7 +427,7 @@ func (r *Response) MakeStreaming(c echo.Context) (err error) {
 			return
 		default:
 			pushRow(row)
-			c.Response().Flush()
+			r.ec.Response().Flush()
 		}
 	}
 
@@ -326,10 +435,17 @@ func (r *Response) MakeStreaming(c echo.Context) (err error) {
 }
 
 func (r *Response) Make() (err error) {
+	if r.Request.ID != "" {
+		r.ec.Response().Header().Set("dbREST-Request-ID", r.Request.ID)
+	}
+
+	if r.Payload != nil {
+		return r.ec.JSON(r.Status, r.Payload)
+	}
 
 	out := ""
-	contentType := r.ec.Request().Header.Get(echo.HeaderContentType)
-	switch strings.ToLower(contentType) {
+	acceptType := r.ec.Request().Header.Get(echo.HeaderAccept)
+	switch strings.ToLower(acceptType) {
 	case "text/plain", "text/csv":
 		r.ec.Response().Header().Set(echo.HeaderContentType, "text/csv")
 		if r.ds != nil {
@@ -352,7 +468,7 @@ func (r *Response) Make() (err error) {
 			out = g.Marshal(r.data.Records())
 		}
 	}
-	return r.ec.String(http.StatusOK, out)
+	return r.ec.String(r.Status, out)
 }
 
 // ReqFunction is the request function type
