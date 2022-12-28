@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/dbrest-io/dbrest/state"
 	"github.com/flarco/dbio"
 	"github.com/flarco/dbio/database"
 	"github.com/flarco/dbio/iop"
@@ -30,13 +31,19 @@ func getTableColumns(c echo.Context) (err error) {
 
 func getTableSelect(c echo.Context) (err error) {
 	req := NewRequest(c)
-	resp := NewResponse(req)
 
 	if err = req.Validate(reqCheckConnection, reqCheckSchema, reqCheckTable); err != nil {
 		return ErrJSON(http.StatusBadRequest, err, "invalid request")
 	}
 
-	rf := func(c database.Connection, req Request) (data iop.Dataset, err error) {
+	// construct SQL Query
+	{
+		conn, err := state.GetConnObject(req.Connection, "")
+		if err != nil {
+			err = ErrJSON(http.StatusNotFound, err, "could not find connection: %s", req.Connection)
+			return err
+		}
+
 		var preOptions, postOptions string
 
 		// TODO: parse fields to ensure no SQL injection
@@ -45,34 +52,29 @@ func getTableSelect(c echo.Context) (err error) {
 		limit = lo.Ternary(limit == 0, 100, limit) // default to 100
 
 		if limit > 0 { // For unlimited, specify -1
-			switch c.GetType() {
+			switch conn.Type {
 			case dbio.TypeDbSQLServer:
 				preOptions = preOptions + g.F("top %d", limit)
 			default:
 				postOptions = postOptions + g.F("limit %d", limit)
 			}
+
+			// set for processQueryRequest
+			req.echoCtx.QueryParams().Set("limit", cast.ToString(limit))
 		}
 
 		noFields := len(fields) == 0 || (len(fields) == 1 && fields[0] == "")
 
-		sql := g.R(
+		req.Query = g.R(
 			"select{preOptions} {fields} from {table}{postOptions}",
 			"fields", lo.Ternary(noFields, "*", strings.Join(fields, ", ")),
 			"table", req.dbTable.FullName(),
 			"preOptions", lo.Ternary(preOptions != "", " "+preOptions, ""),
 			"postOptions", lo.Ternary(postOptions != "", " "+postOptions, ""),
 		)
-
-		return c.Query(sql)
 	}
 
-	resp.data, err = ProcessRequest(req, rf)
-	if err != nil {
-		err = ErrJSON(http.StatusBadRequest, err, "could not get table data")
-		return
-	}
-
-	return resp.Make()
+	return processQueryRequest(req)
 }
 
 func getTableIndexes(c echo.Context) (err error) {

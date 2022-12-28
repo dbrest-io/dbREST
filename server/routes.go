@@ -234,7 +234,7 @@ func (req *Request) GetDatastream() (ds *iop.Datastream, err error) {
 	ds.SafeInference = true
 	ds.SetConfig(cfg)
 
-	contentType := strings.ToLower(req.Header.Get(echo.HeaderContentType))
+	contentType := strings.ToLower(req.Header.Get("Content-Type"))
 	reader := req.echoCtx.Request().Body
 
 	switch contentType {
@@ -355,20 +355,28 @@ type Response struct {
 	ds      *iop.Datastream `json:"-"`
 	data    iop.Dataset     `json:"-"`
 	ec      echo.Context    `json:"-" query:"-"`
+	Header  http.Header     `json:"-" query:"-"`
 }
 
 func NewResponse(req Request) Response {
-	return Response{Request: req, ec: req.echoCtx, Status: 200}
+	return Response{
+		Request: req,
+		ec:      req.echoCtx,
+		Status:  200,
+		Header:  req.echoCtx.Response().Header(),
+	}
 }
 
 func (r *Response) MakeStreaming() (err error) {
 	if r.Request.ID != "" {
-		r.ec.Response().Header().Set("dbREST-Request-ID", r.Request.ID)
+		r.Header.Set("dbREST-Request-ID", r.Request.ID)
 	}
 
 	if r.ds == nil {
 		return r.ec.String(http.StatusOK, "")
 	}
+
+	r.setHeaderColumns(r.ds.Columns)
 	////////////////////
 
 	respW := r.ec.Response().Writer
@@ -378,7 +386,25 @@ func (r *Response) MakeStreaming() (err error) {
 	acceptType := strings.ToLower(r.ec.Request().Header.Get(echo.HeaderAccept))
 
 	switch acceptType {
-	case "text/plain", "text/csv":
+	case "text/plain":
+		r.Header.Set("Content-Type", "text/plain")
+		csvW := csv.NewWriter(respW)
+		csvW.Comma = '\t' // TSV
+
+		// write headers
+		csvW.Write(fields)
+		csvW.Flush()
+
+		pushRow = func(row []interface{}) {
+			_, err = csvW.Write(r.ds.CastRowToString(row))
+			if err != nil {
+				r.ds.Context.Cancel()
+				g.LogError(g.Error(err, "could not encode csv row"))
+			}
+			csvW.Flush()
+		}
+	case "text/csv":
+		r.Header.Set("Content-Type", "text/csv")
 		csvW := csv.NewWriter(respW)
 
 		// write headers
@@ -394,8 +420,18 @@ func (r *Response) MakeStreaming() (err error) {
 			csvW.Flush()
 		}
 
-		r.ec.Response().Header().Set(echo.HeaderContentType, "text/csv")
+	case "application/json":
+		r.Header.Set("Content-Type", "application/json")
+		data, err := r.ds.Collect(0)
+		if err != nil {
+			r.ds.Context.Cancel()
+			g.LogError(g.Error(err, "could not encode json payload"))
+		}
+		out, _ := g.JSONMarshal(data.Records())
+		respW.Write(out)
 	default:
+		r.Header.Set("Content-Type", "application/jsonlines")
+
 		enc := json.NewEncoder(respW)
 		pushRow = func(row []interface{}) {
 			err := enc.Encode(row)
@@ -405,16 +441,13 @@ func (r *Response) MakeStreaming() (err error) {
 			}
 		}
 		columnsI := lo.Map(r.ds.Columns, func(c iop.Column, i int) any {
-			return g.M("name", c.Name, "type", c.Type, "dbType", c.DbType)
+			return c.Name
 		})
 		pushRow(columnsI) // first row is columns
-		r.ec.Response().Flush()
-
-		r.ec.Response().Header().Set(echo.HeaderContentType, "application/json")
 	}
 
 	// write headers
-	r.ec.Response().Header().Set("Transfer-Encoding", "chunked")
+	r.Header.Set("Transfer-Encoding", "chunked")
 	r.ec.Response().WriteHeader(r.Status)
 	r.ec.Response().Flush()
 
@@ -424,6 +457,9 @@ func (r *Response) MakeStreaming() (err error) {
 		select {
 		case <-ctx.Done():
 			r.ds.Context.Cancel()
+			if err = r.ds.Err(); err != nil {
+				return ErrJSON(http.StatusInternalServerError, err)
+			}
 			return
 		default:
 			pushRow(row)
@@ -436,7 +472,7 @@ func (r *Response) MakeStreaming() (err error) {
 
 func (r *Response) Make() (err error) {
 	if r.Request.ID != "" {
-		r.ec.Response().Header().Set("dbREST-Request-ID", r.Request.ID)
+		r.Header.Set("dbREST-Request-ID", r.Request.ID)
 	}
 
 	if r.Payload != nil {
@@ -447,28 +483,52 @@ func (r *Response) Make() (err error) {
 	acceptType := r.ec.Request().Header.Get(echo.HeaderAccept)
 	switch strings.ToLower(acceptType) {
 	case "text/plain", "text/csv":
-		r.ec.Response().Header().Set(echo.HeaderContentType, "text/csv")
+		r.Header.Set("Content-Type", "text/csv")
 		if r.ds != nil {
 			reader := r.ds.NewCsvReader(0, 0)
 			b, _ := io.ReadAll(reader)
 			out = string(b)
 		} else if len(r.data.Columns) > 0 {
+			r.setHeaderColumns(r.data.Columns)
 			reader := r.data.Stream().NewCsvReader(0, 0)
 			b, _ := io.ReadAll(reader)
 			out = string(b)
 		}
-	default:
-		r.ec.Response().Header().Set(echo.HeaderContentType, "application/json")
+	case "application/json":
+		r.Header.Set("Content-Type", "application/json")
 		if r.ds != nil {
 			data, _ := r.ds.Collect(0)
 			r.data = data
 		}
 
 		if len(r.data.Columns) > 0 {
+			r.setHeaderColumns(r.data.Columns)
 			out = g.Marshal(r.data.Records())
+		}
+	default:
+		r.Header.Set("Content-Type", "application/jsonlines")
+		if r.ds != nil {
+			data, _ := r.ds.Collect(0)
+			r.data = data
+		}
+
+		if len(r.data.Columns) > 0 {
+			r.setHeaderColumns(r.data.Columns)
+			lines := []string{g.Marshal(r.data.Columns.Names())}
+			for _, row := range r.data.Rows {
+				lines = append(lines, g.Marshal(row))
+			}
+			out = strings.Join(lines, "\n")
 		}
 	}
 	return r.ec.String(r.Status, out)
+}
+
+func (r Response) setHeaderColumns(cols iop.Columns) {
+	columnsS := lo.Map(cols, func(c iop.Column, i int) any {
+		return []string{c.Name, string(c.Type), c.DbType}
+	})
+	r.Header.Set("dbREST-Request-Columns", g.Marshal(columnsS))
 }
 
 // ReqFunction is the request function type
