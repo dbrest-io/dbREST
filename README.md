@@ -2,7 +2,6 @@
   <img src="https://user-images.githubusercontent.com/7671010/209962006-fa72b231-fb12-4e78-8c72-eb7906874650.png" height="70">
 </p>
 
-# dbREST
 
 dbREST is basically an API backend that you can put in front of your database. Ever wanted to spin up an API service in front of your Snowflake, MySQL or even SQLite database? Well, dbREST allows that! Running `dbrest serve` will launch an API process which allow you to:
 
