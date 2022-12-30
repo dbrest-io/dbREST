@@ -120,7 +120,74 @@ func getTableKeys(c echo.Context) (err error) {
 	return resp.Make()
 }
 
-func postTableInsertUpsert(c echo.Context) (err error) {
+func postTableInsert(c echo.Context) (err error) {
+	req := NewRequest(c)
+	resp := NewResponse(req)
+
+	if err = req.Validate(reqCheckConnection, reqCheckSchema, reqCheckTable); err != nil {
+		return ErrJSON(http.StatusBadRequest, err, "invalid request")
+	}
+
+	rf := func(c database.Connection, req Request) (data iop.Dataset, err error) {
+
+		bulk := req.echoCtx.QueryParam("bulk")
+		strategy := req.echoCtx.QueryParam("strategy")
+
+		ds, err := req.GetDatastream()
+		if err != nil {
+			err = g.Error(err, "could not get datastream")
+			return
+		}
+
+		if req.echoCtx.QueryParam("bulk") == "true" {
+			_ = bulk
+			// TODO: bulk loading option
+			// df, err := iop.MakeDataFlow(ds.Split()...)
+			// if err != nil {
+			// 	err = g.Error(err, "could not make dataflow")
+			// 	return
+			// }
+		}
+
+		ctx := req.echoCtx.Request().Context()
+		err = c.BeginContext(ctx)
+		if err != nil {
+			err = g.Error(err, "could not begin transaction")
+			return
+		}
+
+		var count uint64
+		if strategy == "upsert" {
+			// TODO: add c.UpsertBatchStream
+		} else {
+			count, err = c.InsertBatchStream(req.dbTable.FullName(), ds)
+			if err != nil {
+				err = g.Error(err, "could not insert into table")
+				return
+			}
+		}
+
+		err = c.Commit()
+		if err != nil {
+			err = g.Error(err, "could not commit transaction")
+			return
+		}
+
+		resp.Payload = g.M("affected", count)
+
+		return
+	}
+
+	_, err = ProcessRequest(req, rf)
+	if err != nil {
+		err = ErrJSON(http.StatusBadRequest, err, "could not get process request")
+		return
+	}
+
+	return resp.Make()
+}
+
+func postTableUpsert(c echo.Context) (err error) {
 	req := NewRequest(c)
 	resp := NewResponse(req)
 	resp.Status = http.StatusNotImplemented
@@ -176,13 +243,12 @@ func postTableInsertUpsert(c echo.Context) (err error) {
 			return
 		}
 
-		data.Columns = iop.Columns{{Name: "affected", Type: iop.IntegerType}}
-		data.Append([]any{count})
+		resp.Payload = g.M("affected", count)
 
 		return
 	}
 
-	resp.data, err = ProcessRequest(req, rf)
+	_, err = ProcessRequest(req, rf)
 	if err != nil {
 		err = ErrJSON(http.StatusBadRequest, err, "could not get process request")
 		return

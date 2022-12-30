@@ -105,22 +105,28 @@ var standardRoutes = []echo.Route{
 		Handler: getTableKeys,
 	},
 	{
-		Name:    "getTableSelect",
-		Method:  "GET",
+		Name:    "tableInsert",
+		Method:  "POST",
 		Path:    "/:connection/:schema/:table",
-		Handler: getTableSelect,
+		Handler: postTableInsert,
 	},
 	{
 		Name:    "tableUpsert",
-		Method:  "POST",
+		Method:  "PUT",
 		Path:    "/:connection/:schema/:table",
-		Handler: postTableInsertUpsert,
+		Handler: postTableUpsert,
 	},
 	{
 		Name:    "tableUpdate",
 		Method:  "PATCH",
 		Path:    "/:connection/:schema/:table",
 		Handler: patchTableUpdate,
+	},
+	{
+		Name:    "getTableSelect",
+		Method:  "GET",
+		Path:    "/:connection/:schema/:table",
+		Handler: getTableSelect,
 	},
 }
 
@@ -246,7 +252,15 @@ func (r *Request) CanWrite(table database.Table) bool {
 func (req *Request) GetDatastream() (ds *iop.Datastream, err error) {
 	ctx := req.echoCtx.Request().Context()
 
-	cfg := map[string]string{} // TODO: set input config
+	// whether to flatten json, default is true
+	flatten := req.echoCtx.QueryParam("flatten")
+
+	cfg := map[string]string{
+		"flatten":         lo.Ternary(flatten == "", "true", flatten),
+		"delimiter":       req.echoCtx.QueryParam("delimiter"),
+		"header":          req.echoCtx.QueryParam("header"),
+		"datetime_format": req.echoCtx.QueryParam("datetime_format"),
+	}
 	ds = iop.NewDatastreamContext(ctx, nil)
 	ds.SafeInference = true
 	ds.SetConfig(cfg)

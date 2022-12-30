@@ -171,7 +171,7 @@ func (q *Query) submit() (err error) {
 	q.Status = QueryStatusSubmitted
 	q.Context = g.NewContext(conn.Context().Ctx)
 
-	g.Debug("submitting %s\n%s\n---------------------------------------------------------------------", q.ID, q.Text)
+	g.Debug("--------------------------------------------------------------------- submitting %s", q.ID)
 
 	sqls := database.ParseSQLMultiStatements(q.Text)
 	if len(sqls) == 1 {

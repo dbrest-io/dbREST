@@ -43,7 +43,7 @@ func init() {
 	env.SetHomeDir("dbnet") // https://github.com/dbnet-io/dbnet
 
 	// load first time
-	LoadConnections()
+	LoadConnections(true)
 }
 
 // Connection is a connection
@@ -59,17 +59,17 @@ func (c *Connection) DefaultDB() string {
 
 var lastLoaded time.Time
 
-func LoadConnections() (err error) {
+func LoadConnections(force bool) (err error) {
 	mux.Lock()
 	defer mux.Unlock()
 
-	if time.Since(lastLoaded).Seconds() < 2 {
+	if !(time.Since(lastLoaded).Seconds() > 2 || force) {
 		return
 	}
 
 	Connections = map[string]*Connection{}
 
-	connEntries := connection.GetLocalConns()
+	connEntries := connection.GetLocalConns(force)
 	for _, entry := range connEntries {
 		if !entry.Connection.Type.IsDb() {
 			continue
@@ -116,8 +116,17 @@ func GetConnObject(connName, databaseName string) (connObj connection.Connection
 }
 
 // GetConnInstance gets the connection instance
+func CloseConnections() {
+	mux.Lock()
+	for _, c := range Connections {
+		g.LogError(c.Conn.Close())
+	}
+	mux.Unlock()
+}
+
+// GetConnInstance gets the connection instance
 func GetConnInstance(connName, databaseName string) (conn database.Connection, err error) {
-	err = LoadConnections()
+	err = LoadConnections(false)
 	if err != nil {
 		err = g.Error(err, "could not load connections")
 		return

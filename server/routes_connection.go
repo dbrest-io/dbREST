@@ -20,7 +20,7 @@ func getConnections(c echo.Context) (err error) {
 	}
 
 	// load fresh connections
-	state.LoadConnections()
+	state.LoadConnections(true)
 
 	columns := iop.Columns{
 		{Name: "name", Type: iop.StringType},

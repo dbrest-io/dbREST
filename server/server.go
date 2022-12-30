@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/dbrest-io/dbrest/state"
 	"github.com/flarco/g"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
@@ -42,4 +43,8 @@ func (s *Server) Start() {
 
 func (s *Server) Hostname() string {
 	return g.F("http://localhost:%s", s.Port)
+}
+
+func (s *Server) Close() {
+	state.CloseConnections()
 }
