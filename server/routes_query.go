@@ -89,7 +89,7 @@ func processQueryRequest(req Request) (err error) {
 		}
 		return resp.MakeStreaming()
 	case <-ticker.C:
-		resp.Status = 202 // when status is 202, follow request with header "DbNet-Continue"
+		resp.Status = 202 // when status is 202, follow request with header "dbREST-Continue"
 		resp.Payload = g.ToMap(query)
 		resp.ec.Response().Header().Set("dbREST-Request-Status", string(query.Status))
 	}

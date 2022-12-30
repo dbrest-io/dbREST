@@ -119,7 +119,11 @@ func (q *Query) Cancel() (err error) {
 		return
 	}
 
-	q.Close(true)
+	err = q.Close(true)
+	if err != nil {
+		err = g.Error(err, "could not close query %s", id)
+		return
+	}
 
 	q.Status = QueryStatusCancelled
 
@@ -209,13 +213,17 @@ func (q *Query) submit() (err error) {
 }
 
 // Close closes and cancels the query
-func (q *Query) Close(cancel bool) {
+func (q *Query) Close(cancel bool) (err error) {
 	if cancel {
 		q.Context.Cancel()
 	}
 	if q.Result != nil {
-		q.Result.Close()
+		err = q.Result.Close()
+		if err != nil {
+			return g.Error(err, "could not close results")
+		}
 	}
+	return
 }
 
 func (q *Query) ProcessResult() (err error) {
