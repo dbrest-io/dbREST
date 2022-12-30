@@ -123,13 +123,15 @@ func getTableKeys(c echo.Context) (err error) {
 func postTableInsertUpsert(c echo.Context) (err error) {
 	req := NewRequest(c)
 	resp := NewResponse(req)
+	resp.Status = http.StatusNotImplemented
+	resp.Payload = g.M("error", "Not-Implemented")
+	return resp.Make()
 
 	if err = req.Validate(reqCheckConnection, reqCheckSchema, reqCheckTable); err != nil {
 		return ErrJSON(http.StatusBadRequest, err, "invalid request")
 	}
 
 	rf := func(c database.Connection, req Request) (data iop.Dataset, err error) {
-		return
 
 		bulk := req.echoCtx.QueryParam("bulk")
 		strategy := req.echoCtx.QueryParam("strategy")
@@ -192,13 +194,15 @@ func postTableInsertUpsert(c echo.Context) (err error) {
 func patchTableUpdate(c echo.Context) (err error) {
 	req := NewRequest(c)
 	resp := NewResponse(req)
+	resp.Status = http.StatusNotImplemented
+	resp.Payload = g.M("error", "Not-Implemented")
+	return resp.Make()
 
 	if err = req.Validate(reqCheckConnection, reqCheckSchema, reqCheckTable); err != nil {
 		return ErrJSON(http.StatusBadRequest, err, "invalid request")
 	}
 
 	rf := func(c database.Connection, req Request) (data iop.Dataset, err error) {
-		return
 		bulk := req.echoCtx.QueryParam("bulk")
 
 		ds, err := req.GetDatastream()
