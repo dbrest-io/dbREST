@@ -39,7 +39,7 @@ func TestServer(t *testing.T) {
 	for _, route := range standardRoutes {
 		g.Info("Testing route: %s", route.Name)
 
-		// respMap := map[string]any{}
+		respMap := map[string]any{}
 		respArr := []map[string]any{}
 
 		url := g.F("%s%s", s.Hostname(), route.Path)
@@ -78,10 +78,10 @@ func TestServer(t *testing.T) {
 			go func() {
 				sql := strings.NewReader("select pg_sleep(2) as a")
 				resp, respBytes, err := net.ClientDo(route.Method, url, sql, headers)
-				g.Unmarshal(string(respBytes), &respArr)
+				g.Unmarshal(string(respBytes), &respMap)
 				assert.NoError(t, err, msg)
 				assert.Less(t, resp.StatusCode, 300, msg)
-				assert.Equal(t, len(respArr), 0, msg)
+				assert.NotEmpty(t, respMap["error"], msg)
 			}()
 			time.Sleep(100 * time.Millisecond)
 		case "cancelSQL":
