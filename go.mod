@@ -3,7 +3,7 @@ module github.com/dbrest-io/dbrest
 go 1.19
 
 require (
-	github.com/flarco/dbio v0.3.170
+	github.com/flarco/dbio v0.3.171
 	github.com/flarco/g v0.1.51
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/json-iterator/go v1.1.12

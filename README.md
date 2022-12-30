@@ -156,7 +156,7 @@ roles:
 
 We can now issue tokens with `dbrest token issue <token_name> --roles reader,writer`.
   
-It is built in Go. And as you might have guessed, it also powers alot of `dbNet` :).
+It is built in Go. And as you might have guessed, it also powers alot of [`dbNet`](https://github.com/dbnet-io/dbnet) :).
 
 dbREST is in active developement. Here are some of the databases it connects to:
 * Clickhouse
@@ -173,3 +173,12 @@ dbREST is in active developement. Here are some of the databases it connects to:
 * ScyllaDB (coming soon)
 * Firebolt (coming soon)
 * Databricks (coming soon)
+
+# Running it locally
+
+```bash
+git clone https://github.com/dbrest-io/dbREST.git
+cd dbREST
+go mod tidy # get all dependencies
+go run .
+```
