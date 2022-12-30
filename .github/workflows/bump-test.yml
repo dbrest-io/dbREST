@@ -38,5 +38,6 @@ jobs:
           
       - name: Run Go Tests
         run: |
+          bash scripts/prep.gomod.sh
           cd server
           go test -run TestServer
