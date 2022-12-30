@@ -110,12 +110,12 @@ func SubmitOrGetQuery(q *Query, cont bool) (query *Query, err error) {
 }
 
 func (q *Query) Cancel() (err error) {
-
+	id := q.ID
 	mux.Lock()
-	q, ok := Queries[q.ID]
+	q, ok := Queries[id]
 	mux.Unlock()
 	if !ok {
-		err = g.Error("could not find query %s", q.ID)
+		err = g.Error("could not find query %s", id)
 		return
 	}
 

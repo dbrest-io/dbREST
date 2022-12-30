@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/flarco/g"
@@ -18,7 +19,10 @@ type Server struct {
 }
 
 func NewServer() (s *Server) {
-	s = &Server{EchoServer: echo.New()}
+	s = &Server{EchoServer: echo.New(), Port: "1323"}
+	if port := os.Getenv("PORT"); port != "" {
+		s.Port = port
+	}
 
 	// add routes
 	for _, route := range standardRoutes {
@@ -31,7 +35,11 @@ func NewServer() (s *Server) {
 
 func (s *Server) Start() {
 	s.StartTime = time.Now()
-	if err := s.EchoServer.Start(":1323"); err != http.ErrServerClosed {
+	if err := s.EchoServer.Start(":" + s.Port); err != http.ErrServerClosed {
 		g.LogFatal(g.Error(err, "could not start server"))
 	}
+}
+
+func (s *Server) Hostname() string {
+	return g.F("http://localhost:%s", s.Port)
 }

@@ -21,86 +21,103 @@ var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 var standardRoutes = []echo.Route{
 	{
+		Name:    "getStatus",
 		Method:  "GET",
 		Path:    "/.status",
 		Handler: getStatus,
 	},
 	{
+		Name:    "getConnections",
 		Method:  "GET",
 		Path:    "/.connections",
 		Handler: getConnections,
 	},
 	{
+		Name:    "getConnectionDatabases",
 		Method:  "GET",
 		Path:    "/:connection/.databases",
 		Handler: getConnectionDatabases,
 	},
 	{
+		Name:    "getConnectionSchemas",
 		Method:  "GET",
 		Path:    "/:connection/.schemas",
 		Handler: getConnectionSchemas,
 	},
 	{
+		Name:    "getConnectionTables",
 		Method:  "GET",
 		Path:    "/:connection/.tables",
 		Handler: getConnectionTables,
 	},
 	{
+		Name:    "getConnectionColumns",
 		Method:  "GET",
 		Path:    "/:connection/.columns",
 		Handler: getConnectionColumns,
 	},
 	{
+		Name:    "submitSQL",
 		Method:  "POST",
 		Path:    "/:connection/.sql",
 		Handler: postConnectionSQL,
 	},
 	{
+		Name:    "submitSQL_ID",
 		Method:  "POST",
 		Path:    "/:connection/.sql/:id",
 		Handler: postConnectionSQL,
 	},
 	{
+		Name:    "cancelSQL",
 		Method:  "POST",
 		Path:    "/:connection/.cancel/:id",
 		Handler: postConnectionCancel,
 	},
 	{
+		Name:    "getSchemaTables",
 		Method:  "GET",
 		Path:    "/:connection/:schema/.tables",
 		Handler: getSchemaTables,
 	},
 	{
+		Name:    "getSchemaColumns",
 		Method:  "GET",
 		Path:    "/:connection/:schema/.columns",
 		Handler: getSchemaColumns,
 	},
 	{
+		Name:    "getTableColumns",
 		Method:  "GET",
 		Path:    "/:connection/:schema/:table/.columns",
 		Handler: getTableColumns,
 	},
 	{
+		Name:    "getTableIndexes",
 		Method:  "GET",
 		Path:    "/:connection/:schema/:table/.indexes",
 		Handler: getTableIndexes,
 	},
 	{
+		Name:    "getTableKeys",
 		Method:  "GET",
 		Path:    "/:connection/:schema/:table/.keys",
 		Handler: getTableKeys,
 	},
 	{
+		Name:    "getTableSelect",
 		Method:  "GET",
 		Path:    "/:connection/:schema/:table",
 		Handler: getTableSelect,
 	},
 	{
+		Name:    "tableUpsert",
 		Method:  "POST",
 		Path:    "/:connection/:schema/:table",
 		Handler: postTableInsertUpsert,
 	},
 	{
+		Name:    "tableUpdate",
 		Method:  "PATCH",
 		Path:    "/:connection/:schema/:table",
 		Handler: patchTableUpdate,
