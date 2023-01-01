@@ -175,10 +175,51 @@ dbREST is in active developement. Here are some of the databases it connects to:
 * Databricks (coming soon)
 
 # Running it locally
+# Running it locally
+
+## Brew (Mac)
+
+```bash
+brew install dbrest-io/dbrest/dbrest
+
+# You're good to go!
+dbrest -h
+```
+## Scoop (Windows)
+
+```bash
+scoop bucket add org https://github.com/dbrest-io/scoop-dbrest.git
+scoop install dbrest
+
+# You're good to go!
+dbrest -h
+```
+## Docker
+
+```bash
+docker run -it dbrest/dbrest -h
+```
+
+## Binary (Linux)
+
+Go to this link and download the asset: https://github.com/dbrest-io/dbREST/releases/latest
+
+```bash
+# Download sling binary (amd64)
+curl -LO 'https://github.com/dbrest-io/dbREST/releases/latest/download/dbrest_linux_amd64.tar.gz' \
+  && tar xf dbrest_linux_amd64.tar.gz \
+  && rm -f dbrest_linux_amd64.tar.gz
+  && chmod +x dbrest
+
+# You're good to go!
+dbrest -h
+```
+
+## From Source
 
 ```bash
 git clone https://github.com/dbrest-io/dbREST.git
 cd dbREST
 go mod tidy # get all dependencies
-go run .
+go build -o dbrest
 ```

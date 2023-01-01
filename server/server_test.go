@@ -234,7 +234,7 @@ func setTestRoles() {
 }
 
 func setTestToken() {
-	env.HomeDirTokenFile = path.Join(env.HomeDir, ".tokens.test")
+	env.HomeDirTokenFile = path.Join(".tokens.test")
 	token := state.NewToken([]string{"ROLE_RW"})
 	err := state.Tokens.Add("token_rw", token)
 	g.LogFatal(err)
