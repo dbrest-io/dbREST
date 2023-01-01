@@ -63,7 +63,7 @@ func cliInit() int {
 	// make CLI sub-commands
 	cliConns.Make().Add()
 	cliServe.Make().Add()
-	cliToken.Make().Add()
+	cliTokens.Make().Add()
 
 	for _, cli := range g.CliArr {
 		flaggy.AttachSubcommand(cli.Sc, 1)

@@ -154,7 +154,7 @@ roles:
       allow_sql: 'any' 
 ```
 
-We can now issue tokens with `dbrest token issue <token_name> --roles reader,writer`.
+We can now issue tokens with `dbrest tokens issue <token_name> --roles reader,writer`.
   
 It is built in Go. And as you might have guessed, it also powers alot of [`dbNet`](https://github.com/dbnet-io/dbnet) :).
 

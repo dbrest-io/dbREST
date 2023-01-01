@@ -8,6 +8,7 @@ import (
 	"github.com/dbrest-io/dbrest/server"
 	"github.com/dbrest-io/dbrest/state"
 	"github.com/flarco/dbio/connection"
+	"github.com/flarco/dbio/iop"
 	"github.com/flarco/g"
 	"github.com/integrii/flaggy"
 	"github.com/jedib0t/go-pretty/table"
@@ -76,8 +77,8 @@ var cliConns = &g.CliSC{
 	ExecProcess: conns,
 }
 
-var cliToken = &g.CliSC{
-	Name:        "token",
+var cliTokens = &g.CliSC{
+	Name:        "tokens",
 	Description: "manage access tokens & roles",
 	SubComs: []*g.CliSC{
 		{
@@ -132,8 +133,12 @@ var cliToken = &g.CliSC{
 			Name:        "list",
 			Description: "List all existing tokens",
 		},
+		{
+			Name:        "roles",
+			Description: "List all roles detected",
+		},
 	},
-	ExecProcess: token,
+	ExecProcess: tokens,
 }
 
 func serve(c *g.CliSC) (ok bool, err error) {
@@ -214,7 +219,7 @@ func conns(c *g.CliSC) (ok bool, err error) {
 	return ok, nil
 }
 
-func token(c *g.CliSC) (ok bool, err error) {
+func tokens(c *g.CliSC) (ok bool, err error) {
 	ok = true
 	name := strings.ToLower(cast.ToString(c.Vals["name"]))
 	roles := strings.Split(cast.ToString(c.Vals["roles"]), ",")
@@ -271,7 +276,32 @@ func token(c *g.CliSC) (ok bool, err error) {
 			)
 		}
 		println(T.Render())
+	case "roles":
+		columns := iop.Columns{
+			{Name: "Role", Type: iop.StringType},
+			{Name: "Connection", Type: iop.StringType},
+			{Name: "Grant", Type: iop.StringType},
+			{Name: "Object", Type: iop.StringType},
+		}
+		data := iop.NewDataset(columns)
+		for roleName, role := range state.Roles {
+			for connName, grant := range role {
+				for _, object := range grant.AllowRead {
+					data.Append([]any{roleName, connName, "AllowRead", object})
+				}
 
+				for _, object := range grant.AllowWrite {
+					data.Append([]any{roleName, connName, "AllowWrite", object})
+				}
+
+				if string(grant.AllowSQL) != "" {
+					data.Append([]any{roleName, connName, "AllowSQL", string(grant.AllowSQL)})
+				}
+			}
+		}
+
+		data.Sort(0, 1, 2)
+		data.Print(0)
 	default:
 		return false, nil
 	}
