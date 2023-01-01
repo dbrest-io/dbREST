@@ -167,6 +167,15 @@ var cliToken = &g.CliSC{
 }
 
 func serve(c *g.CliSC) (ok bool, err error) {
+	if len(state.Connections) == 0 {
+		g.Warn("No connections have been defined. Please create some with command `dbrest conns` or put a URL in an environment variable. See https://docs.dbrest.io for more details.")
+		return true, g.Error("No connections have been defined. Please create file %s", env.HomeDirEnvFile)
+	} else if !g.PathExists(env.HomeDirRolesFile) {
+		g.Warn("No roles have been defined. See https://docs.dbrest.io for more details.")
+		return true, g.Error("No roles have been defined. Please create file %s", env.HomeDirRolesFile)
+	} else if !g.PathExists(env.HomeDirTokenFile) {
+		g.Warn("No tokens have been issued. Please issue with command `dbrest token`. See https://docs.dbrest.io for more details.")
+	}
 
 	s := server.NewServer()
 	defer s.Close()

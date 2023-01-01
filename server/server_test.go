@@ -2,10 +2,12 @@ package server
 
 import (
 	"os"
+	"path"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/dbrest-io/dbrest/env"
 	"github.com/dbrest-io/dbrest/state"
 	"github.com/flarco/dbio/database"
 	"github.com/flarco/g"
@@ -232,6 +234,7 @@ func setTestRoles() {
 }
 
 func setTestToken() {
+	env.HomeDirTokenFile = path.Join(env.HomeDir, ".tokens.test")
 	token := state.NewToken([]string{"ROLE_RW"})
 	err := state.Tokens.Add("token_rw", token)
 	g.LogFatal(err)

@@ -1,4 +1,4 @@
-FROM debian:10-slim
+FROM debian:11-slim
 COPY dbrest /
 RUN chmod +x /dbrest
 ENTRYPOINT ["/dbrest"]

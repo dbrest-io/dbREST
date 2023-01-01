@@ -1,7 +1,6 @@
 package state
 
 import (
-	"io/ioutil"
 	"os"
 	"strings"
 	"sync"
@@ -9,7 +8,6 @@ import (
 
 	"github.com/flarco/dbio/connection"
 	"github.com/flarco/dbio/database"
-	"github.com/flarco/dbio/env"
 	"github.com/flarco/g"
 )
 
@@ -24,27 +22,10 @@ var (
 	// Jobs        = map[string]*store.Job{}
 	// Sync syncs to store
 	// Sync           = store.Sync
-	HomeDir        = ""
-	HomeDirEnvFile = ""
-	mux            sync.Mutex
+	mux sync.Mutex
 )
 
 func init() {
-	HomeDir = env.SetHomeDir("dbrest")
-	HomeDirEnvFile = env.GetEnvFilePath(HomeDir)
-
-	// create env file if not exists
-	os.MkdirAll(HomeDir, 0755)
-	if HomeDir != "" && !g.PathExists(HomeDirEnvFile) {
-		defaultEnvBytes, _ := env.EnvFolder.ReadFile("default.env.yaml")
-		defaultEnvBytes = append([]byte("# See https://docs.dbnet.io/\n"), defaultEnvBytes...)
-		ioutil.WriteFile(HomeDirEnvFile, defaultEnvBytes, 0644)
-	}
-
-	// other sources of creds
-	env.SetHomeDir("sling") // https://github.com/slingdata-io/sling
-	env.SetHomeDir("dbnet") // https://github.com/dbnet-io/dbnet
-
 	// load first time
 	LoadConnections(true)
 }
