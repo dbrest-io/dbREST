@@ -57,7 +57,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.REPO_GITHUB_TOKEN }}
 
   release-linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     # runs-on: [self-hosted, Linux]
     timeout-minutes: 15
 
