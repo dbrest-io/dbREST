@@ -175,7 +175,6 @@ dbREST is in active developement. Here are some of the databases it connects to:
 * Databricks (coming soon)
 
 # Running it locally
-# Running it locally
 
 ## Brew (Mac)
 
@@ -201,8 +200,6 @@ docker run -it dbrest/dbrest -h
 ```
 
 ## Binary (Linux)
-
-Go to this link and download the asset: https://github.com/dbrest-io/dbREST/releases/latest
 
 ```bash
 # Download sling binary (amd64)
