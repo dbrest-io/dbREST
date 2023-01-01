@@ -36,7 +36,7 @@ archives:
       amd64: x86_64
 
 checksum:
-  name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}_checksums.txt"
+  name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Runtime.Goos }}_{{ .Runtime.Goarch }}_checksums.txt"
 
 snapshot:
   name_template: "{{ incpatch .Version }}"
