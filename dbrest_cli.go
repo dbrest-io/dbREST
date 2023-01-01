@@ -100,8 +100,8 @@ var cliTokens = &g.CliSC{
 				},
 				{
 					Name:        "regenerate",
-					Type:        "string",
-					Description: "Whether to regenerate the token (it is exists)",
+					Type:        "bool",
+					Description: "Whether to regenerate the token value (if it exists)",
 				},
 			},
 		},
@@ -233,9 +233,10 @@ func tokens(c *g.CliSC) (ok bool, err error) {
 			return false, nil
 		}
 
-		_, regenerate := c.Vals["regenerate"]
+		regenerate := cast.ToBool(c.Vals["regenerate"])
 		token := state.NewToken(roles)
-		if oldToken, ok := state.Tokens[name]; ok {
+		oldToken, existing := state.Tokens[name]
+		if existing {
 			if !regenerate {
 				token.Token = oldToken.Token
 			}
@@ -245,7 +246,16 @@ func tokens(c *g.CliSC) (ok bool, err error) {
 		if err != nil {
 			return ok, g.Error(err, "could not issue token")
 		}
-		g.Info("Successfully added token `%s`", name)
+		if !existing || regenerate {
+			if regenerate {
+				g.Info("Successfully regenerated token `%s`", name)
+			} else {
+				g.Info("Successfully added token `%s`", name)
+			}
+			g.Info("Token Value is: " + token.Token)
+		} else {
+			g.Info("Successfully updated roles for token `%s`. The token value was unchanged. Use --regenerate to regenerate token value.", name)
+		}
 	case "revoke":
 		if name == "" {
 			return false, nil
@@ -263,7 +273,7 @@ func tokens(c *g.CliSC) (ok bool, err error) {
 		if err != nil {
 			return ok, g.Error(err, "could not toggle token")
 		}
-		g.Info("token `%s` is now %s", lo.Ternary(disabled, "disabled", "enabled"))
+		g.Info("token `%s` is now %s", name, lo.Ternary(disabled, "disabled", "enabled"))
 	case "list":
 		tokens := lo.Keys(state.Tokens)
 		sort.Strings(tokens)

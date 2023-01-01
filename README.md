@@ -124,34 +124,33 @@ GET /snowflake_db/my_schema/.columns
 Of course there must be an authentication / authorization logic. It is based on tokens being issued with the `dbrest token` sub-command which are tied to roles defined in a YAML config file:
 
 ```yaml
-roles:
-  reader:
-    snowflake_db:
-      allow_read:
-        - schema1.*
-        - schema2.table1
-      allow_sql: 'disable'
+reader:
+  snowflake_db:
+    allow_read:
+      - schema1.*
+      - schema2.table1
+    allow_sql: 'disable'
 
-    my_pg:
-      allow_read:
-        - '*'
-      allow_sql: 'disable' 
+  my_pg:
+    allow_read:
+      - '*'
+    allow_sql: 'disable' 
 
-  writer:
-    snowflake_db:
-      allow_read:
-        - schema1.*
-        - schema2.table1
-      allow_write:
-        - schema2.table3
-      allow_sql: 'disable'
+writer:
+  snowflake_db:
+    allow_read:
+      - schema1.*
+      - schema2.table1
+    allow_write:
+      - schema2.table3
+    allow_sql: 'disable'
 
-    my_pg:
-      allow_read:
-        - '*'
-      allow_write:
-        - '*'
-      allow_sql: 'any' 
+  my_pg:
+    allow_read:
+      - '*'
+    allow_write:
+      - '*'
+    allow_sql: 'any' 
 ```
 
 We can now issue tokens with `dbrest tokens issue <token_name> --roles reader,writer`.
@@ -196,7 +195,7 @@ dbrest -h
 ## Docker
 
 ```bash
-docker run -it dbrest/dbrest -h
+docker run --rm -it dbrest/dbrest -h
 ```
 
 ## Binary (Linux)

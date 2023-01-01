@@ -60,7 +60,7 @@ func NewRequest(c echo.Context) Request {
 	// token -> roles -> grants
 	if authToken := c.Request().Header.Get("Authorization"); authToken != "" {
 		token, ok := state.ResolveToken(authToken)
-		if ok {
+		if ok && !token.Disabled {
 			req.Roles = state.GetRoleMap(token.Roles)
 			req.Permissions = req.Roles.GetPermissions(req.Connection)
 		}

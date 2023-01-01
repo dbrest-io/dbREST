@@ -110,6 +110,7 @@ func (tm TokenMap) Toggle(name string) (disabled bool, err error) {
 	token.Disabled = !token.Disabled
 	disabled = token.Disabled
 	tm[name] = token
+	TokenValues[token.Token] = token
 	tmMux.Unlock()
 
 	err = tm.Save()
