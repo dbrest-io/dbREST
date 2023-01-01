@@ -17,6 +17,9 @@ var (
 	// Connections is all connections
 	Connections = map[string]*Connection{}
 	Queries     = map[string]*Query{}
+	Tokens      = TokenMap{}
+	TokenValues = map[string]Token{}
+
 	// Queries     = map[string]*store.Query{}
 	// Jobs        = map[string]*store.Job{}
 	// Sync syncs to store
@@ -90,6 +93,7 @@ func LoadConnections(force bool) (err error) {
 // GetConnInstance gets the connection object
 func GetConnObject(connName, databaseName string) (connObj connection.Connection, err error) {
 	mux.Lock()
+	connName = strings.ToUpper(connName)
 	c, ok := Connections[connName]
 	mux.Unlock()
 	if !ok {
@@ -97,8 +101,13 @@ func GetConnObject(connName, databaseName string) (connObj connection.Connection
 		return
 	}
 
+	if databaseName == "" {
+		// default
+		return c.Conn, nil
+	}
+
 	// create new connection with specific database
-	data := g.M("application", "dbREST")
+	data := g.M()
 	for k, v := range c.Conn.Data {
 		data[k] = v
 	}
@@ -118,8 +127,9 @@ func GetConnObject(connName, databaseName string) (connObj connection.Connection
 // GetConnInstance gets the connection instance
 func CloseConnections() {
 	mux.Lock()
-	for _, c := range Connections {
+	for k, c := range Connections {
 		g.LogError(c.Conn.Close())
+		delete(Connections, k)
 	}
 	mux.Unlock()
 }
@@ -133,6 +143,7 @@ func GetConnInstance(connName, databaseName string) (conn database.Connection, e
 	}
 
 	mux.Lock()
+	connName = strings.ToUpper(connName)
 	c := Connections[connName]
 	mux.Unlock()
 

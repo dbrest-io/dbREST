@@ -29,16 +29,23 @@ var (
 	testSchema = ""
 	testTable  = ""
 	testID     = "12345"
+	tokenRW    = ""
 	randomRow  = func() (rec map[string]any) { return }
 )
 
 func TestServer(t *testing.T) {
+	// init
 	deleteTestDB()
 	defer deleteTestDB()
 	err := createTestDB()
 	if !assert.NoError(t, err) {
 		return
 	}
+
+	// set roles & tokens
+	setTestRoles()
+	setTestToken()
+	headers["Authorization"] = tokenRW
 
 	s := NewServer()
 	s.Port = "1456"
@@ -194,3 +201,39 @@ func createTestDB() (err error) {
 }
 
 func deleteTestDB() { os.Remove("./test.db") }
+
+func setTestRoles() {
+	testRoleRW := state.Role{}
+	testRoleR := state.Role{}
+	testRoleW := state.Role{}
+	for connName := range state.Connections {
+		connName = strings.ToUpper(connName)
+		testRoleRW[connName] = state.Grant{
+			AllowRead:  []string{"*"},
+			AllowWrite: []string{"*"},
+			AllowSQL:   state.AllowSQLAny,
+		}
+		testRoleR[connName] = state.Grant{
+			AllowRead:  []string{"*"},
+			AllowWrite: []string{},
+			AllowSQL:   state.AllowSQLDisable,
+		}
+		testRoleW[connName] = state.Grant{
+			AllowRead:  []string{},
+			AllowWrite: []string{"*"},
+			AllowSQL:   state.AllowSQLDisable,
+		}
+	}
+	state.Roles = state.RoleMap{
+		"ROLE_RW": testRoleRW,
+		"ROLE_R":  testRoleR,
+		"ROLE_W":  testRoleW,
+	}
+}
+
+func setTestToken() {
+	token := state.NewToken([]string{"ROLE_RW"})
+	err := state.Tokens.Add("token_rw", token)
+	g.LogFatal(err)
+	tokenRW = token.Token
+}

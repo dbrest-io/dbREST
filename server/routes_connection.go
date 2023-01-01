@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/dbrest-io/dbrest/state"
 	"github.com/flarco/dbio/database"
@@ -9,6 +10,7 @@ import (
 	"github.com/flarco/g"
 	"github.com/labstack/echo/v5"
 	"github.com/samber/lo"
+	"github.com/spf13/cast"
 )
 
 func getConnections(c echo.Context) (err error) {
@@ -75,7 +77,13 @@ func getConnectionSchemas(c echo.Context) (err error) {
 	}
 
 	rf := func(c database.Connection, req Request) (data iop.Dataset, err error) {
-		return c.GetSchemas()
+		data, err = c.GetSchemas()
+		data.Rows = lo.Filter(data.Rows, func(row []any, i int) bool {
+			schema := strings.ToLower(cast.ToString(row[0]))
+			ts := state.SchemaAll(req.Connection, schema)
+			return req.CanRead(ts) || req.CanWrite(ts)
+		})
+		return
 	}
 
 	resp.data, err = ProcessRequest(req, rf)

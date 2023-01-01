@@ -1,34 +1,26 @@
 package env
 
 import (
-	"embed"
-	"io/ioutil"
 	"os"
+	"path"
 
 	env "github.com/flarco/dbio/env"
-	"github.com/flarco/g"
 )
 
 var (
-	HomeDir        = os.Getenv("DBREST_HOME_DIR")
-	HomeDirEnvFile = ""
-	Env            = &env.EnvFile{}
+	HomeDir          = os.Getenv("DBREST_HOME_DIR")
+	HomeDirEnvFile   = ""
+	HomeDirTokenFile = ""
+	HomeDirRolesFile = ""
+	Env              = &env.EnvFile{}
 )
-
-//go:embed *
-var envFolder embed.FS
 
 func init() {
 
 	HomeDir = env.SetHomeDir("dbrest")
 	HomeDirEnvFile = env.GetEnvFilePath(HomeDir)
-
-	// create env file if not exists
-	os.MkdirAll(HomeDir, 0755)
-	if HomeDir != "" && !g.PathExists(HomeDirEnvFile) {
-		defaultEnvBytes, _ := envFolder.ReadFile("default.env.yaml")
-		ioutil.WriteFile(HomeDirEnvFile, defaultEnvBytes, 0644)
-	}
+	HomeDirTokenFile = path.Join(HomeDir, ".tokens") // TODO: use proper salting for tokens
+	HomeDirRolesFile = path.Join(HomeDir, "roles.yaml")
 
 	// other sources of creds
 	env.SetHomeDir("sling")  // https://github.com/slingdata-io/sling

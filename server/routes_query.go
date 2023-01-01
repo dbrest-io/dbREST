@@ -21,6 +21,10 @@ func postConnectionSQL(c echo.Context) (err error) {
 	body, _ := io.ReadAll(c.Request().Body)
 	req.Query = string(body)
 
+	if !req.Roles.CanSQL(req.Connection) {
+		return g.ErrJSON(http.StatusForbidden, g.Error("Not allowed to submit custom SQL"))
+	}
+
 	return processQueryRequest(req)
 }
 
@@ -31,6 +35,8 @@ func postConnectionCancel(c echo.Context) (err error) {
 
 	if err = req.Validate(reqCheckConnection, reqCheckID); err != nil {
 		return ErrJSON(http.StatusBadRequest, err, "invalid request")
+	} else if !req.Roles.CanSQL(req.Connection) {
+		return g.ErrJSON(http.StatusForbidden, g.Error("Not allowed to cancel"))
 	}
 
 	query := state.NewQuery(context.Background())

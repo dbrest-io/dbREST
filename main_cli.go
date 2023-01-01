@@ -1,13 +1,17 @@
 package main
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/dbrest-io/dbrest/env"
 	"github.com/dbrest-io/dbrest/server"
+	"github.com/dbrest-io/dbrest/state"
 	"github.com/flarco/dbio/connection"
 	"github.com/flarco/g"
 	"github.com/integrii/flaggy"
+	"github.com/jedib0t/go-pretty/table"
+	"github.com/samber/lo"
 	"github.com/spf13/cast"
 )
 
@@ -105,6 +109,60 @@ var cliConns = &g.CliSC{
 var cliToken = &g.CliSC{
 	Name:        "token",
 	Description: "manage access tokens & roles",
+	SubComs: []*g.CliSC{
+		{
+			Name:        "issue",
+			Description: "create or replace a token. If it exists, add --regenerate to regenerate it.",
+			PosFlags: []g.Flag{
+				{
+					Name:        "name",
+					ShortName:   "",
+					Type:        "string",
+					Description: "The name of the token",
+				},
+			},
+			Flags: []g.Flag{
+				{
+					Name:        "roles",
+					Type:        "string",
+					Description: "The roles to attach the token to",
+				},
+				{
+					Name:        "regenerate",
+					Type:        "string",
+					Description: "Whether to regenerate the token (it is exists)",
+				},
+			},
+		},
+		{
+			Name:        "revoke",
+			Description: "delete an existing token. The token will no longer have access to the API",
+			PosFlags: []g.Flag{
+				{
+					Name:        "name",
+					ShortName:   "",
+					Type:        "string",
+					Description: "The name of the token",
+				},
+			},
+		},
+		{
+			Name:        "toggle",
+			Description: "Enable/Disable a token",
+			PosFlags: []g.Flag{
+				{
+					Name:        "name",
+					ShortName:   "",
+					Type:        "string",
+					Description: "The name of the token",
+				},
+			},
+		},
+		{
+			Name:        "list",
+			Description: "List all existing tokens",
+		},
+	},
 	ExecProcess: token,
 }
 
@@ -188,10 +246,72 @@ func conns(c *g.CliSC) (ok bool, err error) {
 			println(g.F(" - %s", sn))
 		}
 
-	case "":
+	default:
 		return false, nil
 	}
 	return ok, nil
 }
 
-func token(c *g.CliSC) (ok bool, err error) { return }
+func token(c *g.CliSC) (ok bool, err error) {
+	ok = true
+	name := strings.ToLower(cast.ToString(c.Vals["name"]))
+	roles := strings.Split(cast.ToString(c.Vals["roles"]), ",")
+
+	switch c.UsedSC() {
+	case "issue":
+		if name == "" {
+			return false, nil
+		} else if len(roles) == 0 || roles[0] == "" {
+			g.Warn("Must provide roles with --roles")
+			return false, nil
+		}
+
+		_, regenerate := c.Vals["regenerate"]
+		token := state.NewToken(roles)
+		if oldToken, ok := state.Tokens[name]; ok {
+			if !regenerate {
+				token.Token = oldToken.Token
+			}
+		}
+
+		err = state.Tokens.Add(name, token)
+		if err != nil {
+			return ok, g.Error(err, "could not issue token")
+		}
+		g.Info("Successfully added token `%s`", name)
+	case "revoke":
+		if name == "" {
+			return false, nil
+		}
+		err = state.Tokens.Remove(name)
+		if err != nil {
+			return ok, g.Error(err, "could not revoke token")
+		}
+		g.Info("Successfully removed token `%s`", name)
+	case "toggle":
+		if name == "" {
+			return false, nil
+		}
+		disabled, err := state.Tokens.Toggle(name)
+		if err != nil {
+			return ok, g.Error(err, "could not toggle token")
+		}
+		g.Info("token `%s` is now %s", lo.Ternary(disabled, "disabled", "enabled"))
+	case "list":
+		tokens := lo.Keys(state.Tokens)
+		sort.Strings(tokens)
+		T := table.NewWriter()
+		T.AppendHeader(table.Row{"Token Name", "Enabled", "Roles"})
+		for _, name := range tokens {
+			token := state.Tokens[name]
+			T.AppendRow(
+				table.Row{name, cast.ToString(!token.Disabled), strings.Join(token.Roles, ",")},
+			)
+		}
+		println(T.Render())
+
+	default:
+		return false, nil
+	}
+	return
+}

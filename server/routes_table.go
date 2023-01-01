@@ -34,6 +34,8 @@ func getTableSelect(c echo.Context) (err error) {
 
 	if err = req.Validate(reqCheckConnection, reqCheckSchema, reqCheckTable); err != nil {
 		return ErrJSON(http.StatusBadRequest, err, "invalid request")
+	} else if !req.CanRead(req.dbTable) {
+		return g.ErrJSON(http.StatusForbidden, g.Error("Not allowed"))
 	}
 
 	// construct SQL Query
@@ -126,6 +128,8 @@ func postTableInsert(c echo.Context) (err error) {
 
 	if err = req.Validate(reqCheckConnection, reqCheckSchema, reqCheckTable); err != nil {
 		return ErrJSON(http.StatusBadRequest, err, "invalid request")
+	} else if !req.CanWrite(req.dbTable) {
+		return g.ErrJSON(http.StatusForbidden, g.Error("Not allowed"))
 	}
 
 	rf := func(c database.Connection, req Request) (data iop.Dataset, err error) {
@@ -196,6 +200,8 @@ func postTableUpsert(c echo.Context) (err error) {
 
 	if err = req.Validate(reqCheckConnection, reqCheckSchema, reqCheckTable); err != nil {
 		return ErrJSON(http.StatusBadRequest, err, "invalid request")
+	} else if !req.CanWrite(req.dbTable) {
+		return g.ErrJSON(http.StatusForbidden, g.Error("Not allowed"))
 	}
 
 	rf := func(c database.Connection, req Request) (data iop.Dataset, err error) {
@@ -266,6 +272,8 @@ func patchTableUpdate(c echo.Context) (err error) {
 
 	if err = req.Validate(reqCheckConnection, reqCheckSchema, reqCheckTable); err != nil {
 		return ErrJSON(http.StatusBadRequest, err, "invalid request")
+	} else if !req.CanWrite(req.dbTable) {
+		return g.ErrJSON(http.StatusForbidden, g.Error("Not allowed"))
 	}
 
 	rf := func(c database.Connection, req Request) (data iop.Dataset, err error) {
