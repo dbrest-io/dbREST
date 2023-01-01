@@ -205,7 +205,7 @@ docker run -it dbrest/dbrest -h
 # Download sling binary (amd64)
 curl -LO 'https://github.com/dbrest-io/dbREST/releases/latest/download/dbrest_linux_amd64.tar.gz' \
   && tar xf dbrest_linux_amd64.tar.gz \
-  && rm -f dbrest_linux_amd64.tar.gz
+  && rm -f dbrest_linux_amd64.tar.gz \
   && chmod +x dbrest
 
 # You're good to go!
