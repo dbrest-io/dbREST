@@ -12,6 +12,7 @@ import (
 	"github.com/flarco/dbio/database"
 	"github.com/flarco/g"
 	"github.com/flarco/g/net"
+	"github.com/labstack/echo/v5"
 	"github.com/spf13/cast"
 	"github.com/stretchr/testify/assert"
 )
@@ -32,6 +33,8 @@ var (
 	testTable  = ""
 	testID     = "12345"
 	tokenRW    = ""
+	tokenR     = ""
+	tokenW     = ""
 	randomRow  = func() (rec map[string]any) { return }
 )
 
@@ -56,22 +59,28 @@ func TestServer(t *testing.T) {
 
 	time.Sleep(time.Second)
 
+	makeURL := func(route echo.Route) string {
+		url := g.F("%s%s", s.Hostname(), route.Path)
+		url = strings.ReplaceAll(url, ":connection", testConn)
+		url = strings.ReplaceAll(url, ":schema", testSchema)
+		url = strings.ReplaceAll(url, ":table", testTable)
+		url = strings.ReplaceAll(url, ":id", testID)
+		return url
+	}
+
+	// Test RW
 	missingTests := []string{}
 	for _, route := range standardRoutes {
 		if t.Failed() {
 			break
 		}
 
-		g.Info("Testing route: %s", route.Name)
+		g.Info("Testing route: %s with TokenRW", route.Name)
 
 		respMap := map[string]any{}
 		respArr := []map[string]any{}
 
-		url := g.F("%s%s", s.Hostname(), route.Path)
-		url = strings.ReplaceAll(url, ":connection", testConn)
-		url = strings.ReplaceAll(url, ":schema", testSchema)
-		url = strings.ReplaceAll(url, ":table", testTable)
-		url = strings.ReplaceAll(url, ":id", testID)
+		url := makeURL(route)
 
 		msg := g.F("%s => %s %s", route.Name, route.Method, url)
 
@@ -142,6 +151,98 @@ func TestServer(t *testing.T) {
 	if len(missingTests) > 0 {
 		g.Warn("No test for routes: %s", strings.Join(missingTests, ", "))
 	}
+
+	// Test R
+	headers["Authorization"] = tokenR
+	for _, route := range standardRoutes {
+		if t.Failed() {
+			break
+		} else if !g.In(route.Name, "getTableSelect", "tableInsert", "submitSQL") {
+			continue
+		}
+
+		g.Info("Testing route: %s with TokenR", route.Name)
+
+		url := makeURL(route)
+		msg := g.F("%s => %s %s", route.Name, route.Method, url)
+
+		switch route.Name {
+		case "getTableSelect":
+			// we should have access to place
+			testTable = "place"
+			url = makeURL(route)
+			_, _, err = net.ClientDo(route.Method, url, nil, headers)
+			assert.NoError(t, err, msg)
+
+			// we should not have access to place2
+			testTable = "place2"
+			url = makeURL(route)
+			_, _, err = net.ClientDo(route.Method, url, nil, headers)
+			assert.Error(t, err, msg)
+		case "tableInsert":
+			// we should not have write access to any tables
+			testTable = "place2"
+			url = makeURL(route)
+			recs := []map[string]any{}
+			for i := 0; i < 10; i++ {
+				recs = append(recs, randomRow())
+			}
+			payload := strings.NewReader(g.Marshal(recs))
+			_, _, err = net.ClientDo(route.Method, url, payload, headers)
+			assert.Error(t, err, msg)
+		case "submitSQL":
+			// we should not have sql access
+			sql := strings.NewReader("select 1 as a, 2 as b")
+			_, _, err := net.ClientDo(route.Method, url, sql, headers)
+			assert.Error(t, err, msg)
+		}
+	}
+
+	// Test W
+	headers["Authorization"] = tokenW
+	for _, route := range standardRoutes {
+		if t.Failed() {
+			break
+		} else if !g.In(route.Name, "getTableSelect", "tableInsert", "submitSQL") {
+			continue
+		}
+
+		g.Info("Testing route: %s with TokenW", route.Name)
+
+		url := makeURL(route)
+		msg := g.F("%s => %s %s", route.Name, route.Method, url)
+
+		switch route.Name {
+		case "getTableSelect":
+			// we should not have access to any table
+			testTable = "place"
+			url = makeURL(route)
+			_, _, err = net.ClientDo(route.Method, url, nil, headers)
+			assert.Error(t, err, msg)
+		case "tableInsert":
+			// we should have write access to place
+			testTable = "place"
+			url = makeURL(route)
+			recs := []map[string]any{}
+			for i := 0; i < 10; i++ {
+				recs = append(recs, randomRow())
+			}
+			payload := strings.NewReader(g.Marshal(recs))
+			_, _, err = net.ClientDo(route.Method, url, payload, headers)
+			assert.NoError(t, err, msg)
+
+			testTable = "place2"
+			url = makeURL(route)
+			payload = strings.NewReader(g.Marshal(recs))
+			_, _, err = net.ClientDo(route.Method, url, payload, headers)
+			assert.Error(t, err, msg)
+		case "submitSQL":
+			// we should not have sql access
+			sql := strings.NewReader("select 1 as a, 2 as b")
+			_, _, err := net.ClientDo(route.Method, url, sql, headers)
+			assert.Error(t, err, msg)
+		}
+	}
 }
 
 var longQuery = `
@@ -167,6 +268,11 @@ func createTestDB() (err error) {
 	}
 
 	_, err = conn.Exec(`CREATE INDEX idx_country_city ON place(country, city)`)
+	if err != nil {
+		return err
+	}
+
+	_, err = conn.Exec(`CREATE TABLE "place2" ("id" int, "country" varchar(255), "city" varchar(255), "telcode" bigint, primary key (id))`)
 	if err != nil {
 		return err
 	}
@@ -216,13 +322,13 @@ func setTestRoles() {
 			AllowSQL:   state.AllowSQLAny,
 		}
 		testRoleR[connName] = state.Grant{
-			AllowRead:  []string{"*"},
+			AllowRead:  []string{"main.place"},
 			AllowWrite: []string{},
 			AllowSQL:   state.AllowSQLDisable,
 		}
 		testRoleW[connName] = state.Grant{
 			AllowRead:  []string{},
-			AllowWrite: []string{"*"},
+			AllowWrite: []string{"main.place"},
 			AllowSQL:   state.AllowSQLDisable,
 		}
 	}
@@ -235,8 +341,18 @@ func setTestRoles() {
 
 func setTestToken() {
 	env.HomeDirTokenFile = path.Join(".tokens.test")
-	token := state.NewToken([]string{"ROLE_RW"})
+	token := state.NewToken([]string{"role_rw"})
 	err := state.Tokens.Add("token_rw", token)
 	g.LogFatal(err)
 	tokenRW = token.Token
+
+	token = state.NewToken([]string{"role_r"})
+	err = state.Tokens.Add("token_r", token)
+	g.LogFatal(err)
+	tokenR = token.Token
+
+	token = state.NewToken([]string{"role_w"})
+	err = state.Tokens.Add("token_w", token)
+	g.LogFatal(err)
+	tokenW = token.Token
 }
