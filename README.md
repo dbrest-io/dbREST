@@ -50,7 +50,7 @@ PATCH /snowflake_db/my_schema/my_table?key=col1
 <details><summary>Upsert into a table</summary>
   
 ```http
-POST /snowflake_db/my_schema/my_table?strategy=upsert&key=col1
+PUT /snowflake_db/my_schema/my_table?key=col1
 
 [
   { "col1": "123", "timestamp": "2022-04-22T23:54:06.644268688Z" },
