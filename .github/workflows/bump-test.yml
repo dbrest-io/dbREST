@@ -41,7 +41,7 @@ jobs:
           bash scripts/prep.gomod.sh
 
           go mod tidy
-          go build . -o dbrest
+          go build .
 
           cd server
           go test -run TestServer
