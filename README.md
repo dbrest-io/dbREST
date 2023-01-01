@@ -209,7 +209,7 @@ curl -LO 'https://github.com/dbrest-io/dbREST/releases/latest/download/dbrest_li
   && chmod +x dbrest
 
 # You're good to go!
-dbrest -h
+./dbrest -h
 ```
 
 ## From Source
