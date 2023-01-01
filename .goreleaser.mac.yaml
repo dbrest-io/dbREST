@@ -40,7 +40,7 @@ snapshot:
   name_template: "{{ incpatch .Version }}"
 
 release:
-  replace_existing_draft: true
+  mode: replace
   header: |
     ## dbREST {{ .Tag }} ({{ .Date }})
 

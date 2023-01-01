@@ -54,7 +54,7 @@ func main() {
 
 func cliInit() int {
 	// init CLI
-	flaggy.SetName("dbREST")
+	flaggy.SetName("dbrest")
 	flaggy.SetDescription("Spin up a REST API for any Major Database | https://github.com/dbrest-io/dbREST")
 	flaggy.SetVersion(state.Version)
 	flaggy.DefaultParser.ShowHelpOnUnexpected = true

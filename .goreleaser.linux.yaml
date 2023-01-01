@@ -45,7 +45,7 @@ dockers:
     - "dbrest/dbrest:{{ .Tag }}"
 
 release:
-  replace_existing_draft: true
+  mode: replace
   header: |
     ## dbREST {{ .Tag }} ({{ .Date }})
 
