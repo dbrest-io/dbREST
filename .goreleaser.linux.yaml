@@ -1,0 +1,52 @@
+# This is an example .goreleaser.yml file with some sensible defaults.
+# Make sure to check the documentation at https://goreleaser.com
+project_name: dbrest
+
+before:
+  hooks:
+    - go mod edit -dropreplace='github.com/flarco/g' go.mod
+    - go mod edit -dropreplace='github.com/flarco/dbio' go.mod
+    - go mod tidy
+
+builds:
+  - main: .
+    
+    env:
+      - CGO_ENABLED=1
+
+    goarch:
+      - amd64
+      # - '386'
+      # - arm64
+      # - arm
+    # goarm:
+    #   - '6'
+    #   - '7'
+    goos:
+      - linux
+    ldflags:
+      - "-X 'github.com/dbrest-io/dbrest/state.Version={{.Version}}'"
+
+archives:
+  - replacements:
+      darwin: Darwin
+      linux: Linux
+      windows: Windows
+      386: i386
+      amd64: x86_64
+
+snapshot:
+  name_template: "{{ incpatch .Version }}"
+
+dockers:
+  - dockerfile: 'docker/Dockerfile'
+    image_templates:
+    - "dbrest/dbrest:latest"
+    - "dbrest/dbrest:{{ .Tag }}"
+
+release:
+  replace_existing_draft: true
+  header: |
+    ## dbREST {{ .Tag }} ({{ .Date }})
+
+    

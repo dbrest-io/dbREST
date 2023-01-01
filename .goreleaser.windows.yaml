@@ -1,0 +1,50 @@
+# This is an example .goreleaser.yml file with some sensible defaults.
+# Make sure to check the documentation at https://goreleaser.com
+project_name: dbrest
+
+before:
+  hooks:
+    - go mod edit -dropreplace='github.com/flarco/g' go.mod
+    - go mod edit -dropreplace='github.com/flarco/dbio' go.mod
+    - go mod tidy
+
+builds:
+  - main: ./cmd/dbrest
+    
+    env:
+      - CGO_ENABLED=1
+
+    goarch:
+      - amd64
+      # - arm64
+    goos:
+      - windows
+    ldflags:
+      - "-X 'github.com/dbrest-io/dbrest/state.Version={{.Version}}'"
+
+archives:
+  - replacements:
+      darwin: Darwin
+      linux: Linux
+      windows: Windows
+      386: i386
+      amd64: x86_64
+
+snapshot:
+  name_template: "{{ incpatch .Version }}"
+
+release:
+  replace_existing_draft: true
+  header: |
+    ## dbREST {{ .Tag }} ({{ .Date }})
+
+scoop:
+  name: dbrest
+  bucket:
+    owner: dbrest-io
+    name: scoop-dbrest
+    branch: main
+
+  homepage: https:/github.com/dbrest-io/dbrest
+
+  description: "dbREST is an API backend that you can put in front of your database. Ever wanted to spin up an API service in front of your Snowflake, MySQL or even SQLite database? Well, dbREST allows that!"
