@@ -202,7 +202,7 @@ docker run -it dbrest/dbrest -h
 ## Binary (Linux)
 
 ```bash
-# Download sling binary (amd64)
+# Download binary (amd64)
 curl -LO 'https://github.com/dbrest-io/dbREST/releases/latest/download/dbrest_linux_amd64.tar.gz' \
   && tar xf dbrest_linux_amd64.tar.gz \
   && rm -f dbrest_linux_amd64.tar.gz \
