@@ -59,7 +59,7 @@ func LoadConnections(force bool) (err error) {
 			continue
 		}
 
-		name := strings.ToUpper(strings.ReplaceAll(entry.Name, "/", "_"))
+		name := strings.ToLower(strings.ReplaceAll(entry.Name, "/", "_"))
 		Connections[name] = &Connection{
 			Conn:  entry.Connection,
 			Props: map[string]string{},
@@ -74,7 +74,7 @@ func LoadConnections(force bool) (err error) {
 // GetConnInstance gets the connection object
 func GetConnObject(connName, databaseName string) (connObj connection.Connection, err error) {
 	mux.Lock()
-	connName = strings.ToUpper(connName)
+	connName = strings.ToLower(connName)
 	c, ok := Connections[connName]
 	mux.Unlock()
 	if !ok {
@@ -124,7 +124,7 @@ func GetConnInstance(connName, databaseName string) (conn database.Connection, e
 	}
 
 	mux.Lock()
-	connName = strings.ToUpper(connName)
+	connName = strings.ToLower(connName)
 	c := Connections[connName]
 	mux.Unlock()
 

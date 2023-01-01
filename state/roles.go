@@ -47,9 +47,9 @@ func LoadRoles(force bool) (err error) {
 		for name, r := range roles {
 			role := Role{}
 			for k, grant := range r {
-				role[strings.ToUpper(k)] = grant
+				role[strings.ToLower(k)] = grant
 			}
-			Roles[strings.ToUpper(name)] = role
+			Roles[strings.ToLower(name)] = role
 		}
 		lastLoadedRoles = time.Now()
 	}
@@ -59,7 +59,7 @@ func LoadRoles(force bool) (err error) {
 func GetRoleMap(roles []string) (rm RoleMap) {
 	rm = RoleMap{}
 	for _, rn := range roles {
-		rn = strings.ToUpper(rn)
+		rn = strings.ToLower(rn)
 		if role, ok := Roles[rn]; ok {
 			rm[rn] = role
 		}

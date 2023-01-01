@@ -170,7 +170,7 @@ func conns(c *g.CliSC) (ok bool, err error) {
 
 	switch c.UsedSC() {
 	case "unset":
-		name := strings.ToUpper(cast.ToString(c.Vals["name"]))
+		name := strings.ToLower(cast.ToString(c.Vals["name"]))
 		if name == "" {
 			flaggy.ShowHelp("")
 			return ok, nil
@@ -193,7 +193,7 @@ func conns(c *g.CliSC) (ok bool, err error) {
 			k = strings.ToLower(k)
 			kvMap[k] = v
 		}
-		name := strings.ToUpper(cast.ToString(c.Vals["name"]))
+		name := strings.ToLower(cast.ToString(c.Vals["name"]))
 
 		err := ec.Set(name, kvMap)
 		if err != nil {

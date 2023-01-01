@@ -81,7 +81,7 @@ func (tm TokenMap) Add(name string, token Token) (err error) {
 	}
 
 	for _, role := range token.Roles {
-		role = strings.ToUpper(role)
+		role = strings.ToLower(role)
 		if !lo.Contains(roles, role) {
 			return g.Error("invalid role: %s. Available roles: %s", role, strings.Join(roles, ","))
 		}

@@ -209,7 +209,7 @@ func setTestRoles() {
 	testRoleR := state.Role{}
 	testRoleW := state.Role{}
 	for connName := range state.Connections {
-		connName = strings.ToUpper(connName)
+		connName = strings.ToLower(connName)
 		testRoleRW[connName] = state.Grant{
 			AllowRead:  []string{"*"},
 			AllowWrite: []string{"*"},
@@ -227,9 +227,9 @@ func setTestRoles() {
 		}
 	}
 	state.Roles = state.RoleMap{
-		"ROLE_RW": testRoleRW,
-		"ROLE_R":  testRoleR,
-		"ROLE_W":  testRoleW,
+		"role_rw": testRoleRW,
+		"role_r":  testRoleR,
+		"role_w":  testRoleW,
 	}
 }
 

@@ -38,7 +38,7 @@ func NewRequest(c echo.Context) Request {
 
 	req := Request{
 		ID:          c.PathParam("id"),
-		Connection:  strings.ToUpper(c.PathParam("connection")),
+		Connection:  strings.ToLower(c.PathParam("connection")),
 		Schema:      c.PathParam("schema"),
 		Table:       c.PathParam("table"),
 		Database:    c.QueryParam("database"),
