@@ -3,7 +3,7 @@ module github.com/dbrest-io/dbrest
 go 1.19
 
 require (
-	github.com/flarco/dbio v0.3.177
+	github.com/flarco/dbio v0.3.178
 	github.com/flarco/g v0.1.51
 	github.com/integrii/flaggy v1.5.2
 	github.com/jmoiron/sqlx v1.2.0

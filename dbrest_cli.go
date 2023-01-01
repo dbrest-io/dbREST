@@ -27,36 +27,6 @@ var cliConns = &g.CliSC{
 	Description: "Manage local connections in the dbREST env file",
 	SubComs: []*g.CliSC{
 		{
-			Name:        "discover",
-			Description: "list available streams in connection",
-			PosFlags: []g.Flag{
-				{
-					Name:        "name",
-					ShortName:   "",
-					Type:        "string",
-					Description: "The name of the connection to test",
-				},
-			},
-			Flags: []g.Flag{
-				{
-					Name:        "filter",
-					ShortName:   "f",
-					Type:        "string",
-					Description: "filter stream name by pattern (e.g. account_*)",
-				},
-				{
-					Name:        "folder",
-					Type:        "string",
-					Description: "discover streams in a specific folder (for file connections)",
-				},
-				{
-					Name:        "schema",
-					Type:        "string",
-					Description: "discover streams in a specific schema (for database connections)",
-				},
-			},
-		},
-		{
 			Name:        "list",
 			Description: "list local connections detected",
 		},
@@ -236,23 +206,6 @@ func conns(c *g.CliSC) (ok bool, err error) {
 			return ok, g.Error(err, "could not test %s", name)
 		} else if ok {
 			g.Info("success!") // successfully connected
-		}
-	case "discover":
-		name := cast.ToString(c.Vals["name"])
-		opt := connection.DiscoverOptions{
-			Schema: cast.ToString(c.Vals["schema"]),
-			Folder: cast.ToString(c.Vals["folder"]),
-			Filter: cast.ToString(c.Vals["filter"]),
-		}
-
-		streamNames, err := ec.Discover(name, opt)
-		if err != nil {
-			return ok, g.Error(err, "could not discover %s", name)
-		}
-
-		g.Info("Found %d streams:", len(streamNames))
-		for _, sn := range streamNames {
-			println(g.F(" - %s", sn))
 		}
 
 	default:
