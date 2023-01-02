@@ -11,7 +11,7 @@ Running `dbrest serve` will launch an API process which allow you to:
 <details><summary>Select a table's data</summary>
   
 ```http
-GET /snowflake_db/my_schema/docker_logs?fields=container_name,timestamp&limit=100
+GET /snowflake_db/my_schema/docker_logs?.columns=container_name,timestamp&.limit=100
 ```
   
 ```json
@@ -37,7 +37,7 @@ POST /snowflake_db/my_schema/docker_logs
 <details><summary>Update a table</summary>
   
 ```http
-PATCH /snowflake_db/my_schema/my_table?key=col1
+PATCH /snowflake_db/my_schema/my_table?.key=col1
 
 [
   { "col1": "123", "timestamp": "2022-04-22T23:54:06.644268688Z" },
@@ -50,7 +50,7 @@ PATCH /snowflake_db/my_schema/my_table?key=col1
 <details><summary>Upsert into a table</summary>
   
 ```http
-PUT /snowflake_db/my_schema/my_table?key=col1
+PUT /snowflake_db/my_schema/my_table?.key=col1
 
 [
   { "col1": "123", "timestamp": "2022-04-22T23:54:06.644268688Z" },
