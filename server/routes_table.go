@@ -49,9 +49,31 @@ func getTableSelect(c echo.Context) (err error) {
 		var preOptions, postOptions string
 
 		// TODO: parse fields to ensure no SQL injection
-		fields := strings.Split(req.echoCtx.QueryParam("fields"), ",")
-		limit := cast.ToInt(req.echoCtx.QueryParam("limit"))
-		limit = lo.Ternary(limit == 0, 100, limit) // default to 100
+		var fields []string
+		var limit int
+		whereMap := map[string]string{}
+
+		for k, v := range req.echoCtx.QueryParams() {
+			switch k {
+			case ".columns":
+				fields = strings.Split(v[0], ",")
+			case ".limit":
+				limit = cast.ToInt(v[0])
+				limit = lo.Ternary(limit == 0, 100, limit)
+			default:
+				whereMap[k] = v[0]
+			}
+		}
+
+		makeWhere := func() (ws string) {
+			arr := []string{}
+			for k, v := range whereMap {
+				expr := g.F("%s=%s", k, v)
+				arr = append(arr, expr)
+			}
+			// TODO: SQL Injection is possible, need to use bind vars
+			return strings.Join(arr, " and ")
+		}
 
 		if limit > 0 { // For unlimited, specify -1
 			switch conn.Type {
@@ -66,11 +88,13 @@ func getTableSelect(c echo.Context) (err error) {
 		}
 
 		noFields := len(fields) == 0 || (len(fields) == 1 && fields[0] == "")
+		noWhere := len(whereMap) == 0
 
 		req.Query = g.R(
-			"select{preOptions} {fields} from {table}{postOptions}",
+			"select{preOptions} {fields} from {table} where {where} {postOptions}",
 			"fields", lo.Ternary(noFields, "*", strings.Join(fields, ", ")),
 			"table", req.dbTable.FullName(),
+			"where", lo.Ternary(noWhere, "1=1", makeWhere()),
 			"preOptions", lo.Ternary(preOptions != "", " "+preOptions, ""),
 			"postOptions", lo.Ternary(postOptions != "", " "+postOptions, ""),
 		)
@@ -134,8 +158,7 @@ func postTableInsert(c echo.Context) (err error) {
 
 	rf := func(c database.Connection, req Request) (data iop.Dataset, err error) {
 
-		bulk := req.echoCtx.QueryParam("bulk")
-		strategy := req.echoCtx.QueryParam("strategy")
+		bulk := req.echoCtx.QueryParam(".bulk")
 
 		ds, err := req.GetDatastream()
 		if err != nil {
@@ -160,15 +183,10 @@ func postTableInsert(c echo.Context) (err error) {
 			return
 		}
 
-		var count uint64
-		if strategy == "upsert" {
-			// TODO: add c.UpsertBatchStream
-		} else {
-			count, err = c.InsertBatchStream(req.dbTable.FullName(), ds)
-			if err != nil {
-				err = g.Error(err, "could not insert into table")
-				return
-			}
+		count, err := c.InsertBatchStream(req.dbTable.FullName(), ds)
+		if err != nil {
+			err = g.Error(err, "could not insert into table")
+			return
 		}
 
 		err = c.Commit()
@@ -207,7 +225,6 @@ func postTableUpsert(c echo.Context) (err error) {
 	rf := func(c database.Connection, req Request) (data iop.Dataset, err error) {
 
 		bulk := req.echoCtx.QueryParam("bulk")
-		strategy := req.echoCtx.QueryParam("strategy")
 
 		ds, err := req.GetDatastream()
 		if err != nil {
@@ -232,15 +249,11 @@ func postTableUpsert(c echo.Context) (err error) {
 			return
 		}
 
-		var count uint64
-		if strategy == "upsert" {
-			// TODO: add c.UpsertBatchStream
-		} else {
-			count, err = c.InsertBatchStream(req.dbTable.FullName(), ds)
-			if err != nil {
-				err = g.Error(err, "could not insert into table")
-				return
-			}
+		// TODO: add c.UpsertBatchStream
+		count, err := c.InsertBatchStream(req.dbTable.FullName(), ds)
+		if err != nil {
+			err = g.Error(err, "could not insert into table")
+			return
 		}
 
 		err = c.Commit()
@@ -303,8 +316,12 @@ func patchTableUpdate(c echo.Context) (err error) {
 			return
 		}
 
-		var count uint64
 		// TODO: add c.UpdateBatchStream
+		count, err := c.InsertBatchStream(req.dbTable.FullName(), ds)
+		if err != nil {
+			err = g.Error(err, "could not insert into table")
+			return
+		}
 
 		err = c.Commit()
 		if err != nil {

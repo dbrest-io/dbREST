@@ -89,7 +89,7 @@ func TestServer(t *testing.T) {
 			resp, respBytes, err := net.ClientDo(route.Method, url, nil, headers)
 			assert.NoError(t, err, msg)
 			assert.Less(t, resp.StatusCode, 300, msg)
-			assert.Equal(t, "OK", string(respBytes), msg)
+			assert.Equal(t, "dbREST dev", string(respBytes), msg)
 		case "getConnections", "getConnectionDatabases", "getConnectionSchemas", "getConnectionTables", "getConnectionColumns", "getSchemaTables", "getSchemaColumns", "getTableColumns", "getTableSelect", "getTableKeys":
 			resp, respBytes, err := net.ClientDo(route.Method, url, nil, headers)
 			g.Unmarshal(string(respBytes), &respArr)

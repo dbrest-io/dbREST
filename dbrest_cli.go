@@ -287,6 +287,11 @@ func tokens(c *g.CliSC) (ok bool, err error) {
 		}
 		println(T.Render())
 	case "roles":
+		err = state.LoadRoles(true)
+		if err != nil {
+			return true, g.Error(err, "could not load roles")
+		}
+
 		columns := iop.Columns{
 			{Name: "Role", Type: iop.StringType},
 			{Name: "Connection", Type: iop.StringType},

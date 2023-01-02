@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/dbrest-io/dbrest/state"
+	"github.com/flarco/dbio/connection"
 	"github.com/flarco/dbio/database"
 	"github.com/flarco/dbio/filesys"
 	"github.com/flarco/dbio/iop"
@@ -27,11 +28,12 @@ type Request struct {
 	Procedure  string `json:"procedure" query:"procedure"`
 	Data       any    `json:"data" query:"data"`
 
-	Header      http.Header       `json:"-" query:"-"`
-	dbTable     database.Table    `json:"-" query:"-"`
-	Roles       state.RoleMap     `json:"-" query:"-"`
-	Permissions state.Permissions `json:"-" query:"-"`
-	echoCtx     echo.Context      `json:"-" query:"-"`
+	conn        connection.Connection `json:"-" query:"-"`
+	Header      http.Header           `json:"-" query:"-"`
+	dbTable     database.Table        `json:"-" query:"-"`
+	Roles       state.RoleMap         `json:"-" query:"-"`
+	Permissions state.Permissions     `json:"-" query:"-"`
+	echoCtx     echo.Context          `json:"-" query:"-"`
 }
 
 func NewRequest(c echo.Context) Request {
@@ -54,13 +56,12 @@ func NewRequest(c echo.Context) Request {
 	req.ID = lo.Ternary(req.ID == "", c.QueryParam("id"), req.ID)
 	req.Schema = lo.Ternary(req.Schema == "", c.QueryParam("schema"), req.Schema)
 
-	// load tokens, do not force, cached & throttled
-	state.LoadTokens(false)
-
 	// token -> roles -> grants
+	state.LoadTokens(false) // load tokens, do not force, cached & throttled
 	if authToken := c.Request().Header.Get("Authorization"); authToken != "" {
 		token, ok := state.ResolveToken(authToken)
 		if ok && !token.Disabled {
+			state.LoadRoles(false) // load roles, do not force, cached & throttled
 			req.Roles = state.GetRoleMap(token.Roles)
 			req.Permissions = req.Roles.GetPermissions(req.Connection)
 		}
@@ -80,6 +81,7 @@ func NewRequest(c echo.Context) Request {
 			req.Schema = t.Schema
 		}
 	}
+	req.conn = conn
 
 	return req
 }

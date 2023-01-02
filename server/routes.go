@@ -3,6 +3,8 @@ package server
 import (
 	"net/http"
 
+	"github.com/dbrest-io/dbrest/state"
+	"github.com/flarco/g"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/labstack/echo/v5"
 )
@@ -120,4 +122,7 @@ var standardRoutes = []echo.Route{
 	},
 }
 
-func getStatus(c echo.Context) (err error) { return c.String(http.StatusOK, "OK") }
+func getStatus(c echo.Context) (err error) {
+	out := g.F("dbREST %s", state.Version)
+	return c.String(http.StatusOK, out)
+}
