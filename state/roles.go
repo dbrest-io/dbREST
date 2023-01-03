@@ -67,6 +67,15 @@ func GetRoleMap(roles []string) (rm RoleMap) {
 	return
 }
 
+func (rm RoleMap) HasAccess(connection string) bool {
+	for _, role := range rm {
+		if _, ok := role[connection]; ok {
+			return true
+		}
+	}
+	return false
+}
+
 func (rm RoleMap) GetPermissions(connection string) (perms Permissions) {
 	perms = Permissions{}
 	for _, role := range rm {

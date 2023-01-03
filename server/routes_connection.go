@@ -28,15 +28,20 @@ func getConnections(c echo.Context) (err error) {
 		{Name: "name", Type: iop.StringType},
 		{Name: "type", Type: iop.StringType},
 		{Name: "database", Type: iop.StringType},
-		{Name: "dbt", Type: iop.BoolType},
+		{Name: "source", Type: iop.StringType},
 	}
 	resp.data = iop.NewDataset(columns)
 	for _, conn := range state.Connections {
+		connName := strings.ToLower(conn.Conn.Info().Name)
+		if !req.Roles.HasAccess(connName) {
+			continue
+		}
+
 		row := []any{
-			conn.Conn.Info().Name,
+			connName,
 			conn.Conn.Info().Type,
 			conn.Conn.Info().Database,
-			conn.Conn.Data["dbt"],
+			conn.Source,
 		}
 		resp.data.Append(row)
 	}

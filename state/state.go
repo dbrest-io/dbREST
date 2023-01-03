@@ -32,8 +32,9 @@ func init() {
 
 // Connection is a connection
 type Connection struct {
-	Conn  connection.Connection
-	Props map[string]string // to cache vars
+	Conn   connection.Connection
+	Source string
+	Props  map[string]string // to cache vars
 }
 
 // DefaultDB returns the default database
@@ -61,8 +62,9 @@ func LoadConnections(force bool) (err error) {
 
 		name := strings.ToLower(strings.ReplaceAll(entry.Name, "/", "_"))
 		Connections[name] = &Connection{
-			Conn:  entry.Connection,
-			Props: map[string]string{},
+			Conn:   entry.Connection,
+			Source: entry.Source,
+			Props:  map[string]string{},
 		}
 	}
 

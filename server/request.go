@@ -86,20 +86,6 @@ func NewRequest(c echo.Context) Request {
 	return req
 }
 
-type requestCheck string
-
-const (
-	reqCheckID         requestCheck = "id"
-	reqCheckName       requestCheck = "name"
-	reqCheckConnection requestCheck = "connection"
-	reqCheckDatabase   requestCheck = "database"
-	reqCheckSchema     requestCheck = "schema"
-	reqCheckTable      requestCheck = "table"
-	reqCheckQuery      requestCheck = "query"
-	reqCheckProcedure  requestCheck = "procedure"
-	reqCheckData       requestCheck = "data"
-)
-
 func (r *Request) CanRead(table database.Table) bool {
 	if p, ok := r.Permissions["*"]; ok {
 		if p.CanRead() {
@@ -228,6 +214,20 @@ func (r *Request) GetFileUpload() (src io.ReadCloser, err error) {
 	return
 }
 
+type requestCheck string
+
+const (
+	reqCheckID         requestCheck = "id"
+	reqCheckName       requestCheck = "name"
+	reqCheckConnection requestCheck = "connection"
+	reqCheckDatabase   requestCheck = "database"
+	reqCheckSchema     requestCheck = "schema"
+	reqCheckTable      requestCheck = "table"
+	reqCheckQuery      requestCheck = "query"
+	reqCheckProcedure  requestCheck = "procedure"
+	reqCheckData       requestCheck = "data"
+)
+
 func (r *Request) Validate(checks ...requestCheck) (err error) {
 	eG := g.ErrorGroup{}
 	for _, check := range checks {
@@ -239,6 +239,8 @@ func (r *Request) Validate(checks ...requestCheck) (err error) {
 		case reqCheckConnection:
 			if cast.ToString(r.Connection) == "" {
 				eG.Add(g.Error("missing request value for: connection"))
+			} else if !r.Roles.HasAccess(r.Connection) {
+				eG.Add(g.Error("forbidden access for: connection"))
 			}
 		case reqCheckDatabase:
 			if cast.ToString(r.Database) == "" {
@@ -271,6 +273,11 @@ func (r *Request) Validate(checks ...requestCheck) (err error) {
 				eG.Add(g.Error("missing request value for: data"))
 			}
 		}
+	}
+
+	// token has role
+	if len(r.Roles) == 0 {
+		return g.Error("Invalid token or forbidden")
 	}
 
 	return eG.Err()
