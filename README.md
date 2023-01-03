@@ -123,7 +123,7 @@ GET /snowflake_db/my_schema/.columns
 ```
 </details>
 
-Of course there must be an authentication / authorization logic. It is based on tokens being issued with the `dbrest token` sub-command which are tied to roles defined in a YAML config file:
+Of course there must be an authentication / authorization logic. It is based on tokens being issued with the `dbrest tokens` sub-command which are tied to roles defined in a YAML config file:
 
 ```yaml
 reader:
