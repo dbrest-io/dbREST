@@ -3,15 +3,18 @@ module github.com/dbrest-io/dbrest
 go 1.19
 
 require (
+	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/flarco/dbio v0.3.178
 	github.com/flarco/g v0.1.51
 	github.com/integrii/flaggy v1.5.2
+	github.com/jedib0t/go-pretty v4.3.0+incompatible
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/json-iterator/go v1.1.12
 	github.com/labstack/echo/v5 v5.0.0-20220201181537-ed2888cfa198
 	github.com/samber/lo v1.25.0
 	github.com/spf13/cast v1.5.0
 	github.com/stretchr/testify v1.8.1
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -106,7 +109,6 @@ require (
 	github.com/jackc/pgx/v4 v4.15.0 // indirect
 	github.com/jaypipes/ghw v0.6.1 // indirect
 	github.com/jaypipes/pcidb v0.5.0 // indirect
-	github.com/jedib0t/go-pretty v4.3.0+incompatible // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.4 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
@@ -177,7 +179,6 @@ require (
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/driver/postgres v1.0.5 // indirect
 	gorm.io/driver/sqlite v1.1.4 // indirect
 	gorm.io/gorm v1.20.7 // indirect

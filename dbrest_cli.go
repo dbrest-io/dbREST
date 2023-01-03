@@ -1,15 +1,19 @@
 package main
 
 import (
+	"os"
+	"runtime"
 	"sort"
 	"strings"
 
 	"github.com/dbrest-io/dbrest/env"
 	"github.com/dbrest-io/dbrest/server"
 	"github.com/dbrest-io/dbrest/state"
+	"github.com/denisbrodbeck/machineid"
 	"github.com/flarco/dbio/connection"
 	"github.com/flarco/dbio/iop"
 	"github.com/flarco/g"
+	"github.com/flarco/g/net"
 	"github.com/integrii/flaggy"
 	"github.com/jedib0t/go-pretty/table"
 	"github.com/samber/lo"
@@ -156,6 +160,7 @@ func serve(c *g.CliSC) (ok bool, err error) {
 	defer s.Close()
 
 	go s.Start()
+	go telemetry("serve")
 
 	<-ctx.Ctx.Done()
 
@@ -321,4 +326,54 @@ func tokens(c *g.CliSC) (ok bool, err error) {
 		return false, nil
 	}
 	return
+}
+
+func cliInit() int {
+	// init CLI
+	flaggy.SetName("dbrest")
+	flaggy.SetDescription("Spin up a REST API for any Major Database | https://github.com/dbrest-io/dbREST")
+	flaggy.SetVersion(state.Version)
+	flaggy.DefaultParser.ShowHelpOnUnexpected = true
+	flaggy.DefaultParser.AdditionalHelpPrepend = "Version " + state.Version
+
+	// make CLI sub-commands
+	cliConns.Make().Add()
+	cliServe.Make().Add()
+	cliTokens.Make().Add()
+
+	for _, cli := range g.CliArr {
+		flaggy.AttachSubcommand(cli.Sc, 1)
+	}
+
+	flaggy.ShowHelpOnUnexpectedDisable()
+	flaggy.Parse()
+
+	ok, err := g.CliProcess()
+	if err != nil {
+		g.LogFatal(err)
+	} else if !ok {
+		flaggy.ShowHelp("")
+	}
+
+	return 0
+}
+
+func telemetry(action string) {
+	if val := os.Getenv("DBREST_TELEMETRY"); val != "" {
+		if !cast.ToBool(val) {
+			return
+		}
+	}
+	const telemetryURL = "https://liveflarccszw.dataplane.rudderstack.com/v1/webhook?writeKey=2JpSsZZ81lPlzMmos0mqQsCXNXm"
+
+	machineID, _ := machineid.ProtectedID("dbrest")
+
+	payload := g.M(
+		"version", state.Version,
+		"os", runtime.GOOS,
+		"action", action,
+		"anonymous_id", machineID,
+	)
+	net.ClientDo("POST", telemetryURL, strings.NewReader(g.Marshal(payload)), nil)
+
 }
