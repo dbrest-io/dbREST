@@ -188,7 +188,7 @@ dbrest -h
 ## Scoop (Windows)
 
 ```bash
-scoop bucket add org https://github.com/dbrest-io/scoop-dbrest.git
+scoop bucket add dbrest https://github.com/dbrest-io/scoop-dbrest.git
 scoop install dbrest
 
 # You're good to go!
