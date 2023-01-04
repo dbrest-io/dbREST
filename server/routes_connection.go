@@ -175,7 +175,7 @@ func getSchemataTables(req Request) (resp Response, err error) {
 			{Name: "database_name", Type: iop.StringType},
 			{Name: "schema_name", Type: iop.StringType},
 			{Name: "table_name", Type: iop.StringType},
-			{Name: "is_view", Type: iop.StringType},
+			{Name: "table_type", Type: iop.StringType},
 		}
 		data = iop.NewDataset(columns)
 		for _, table := range schemata.Tables() {
