@@ -372,7 +372,7 @@ func telemetry(action string) {
 		"version", state.Version,
 		"os", runtime.GOOS,
 		"action", action,
-		"anonymous_id", machineID,
+		"machine_id", machineID,
 	)
 	net.ClientDo("POST", telemetryURL, strings.NewReader(g.Marshal(payload)), nil)
 
