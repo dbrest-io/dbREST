@@ -140,7 +140,7 @@ var cliTokens = &g.CliSC{
 		},
 		{
 			Name:        "roles",
-			Description: "List all roles detected",
+			Description: "List all roles detected in " + env.HomeDirRolesFile,
 		},
 	},
 	ExecProcess: tokens,
