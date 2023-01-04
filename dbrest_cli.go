@@ -16,6 +16,7 @@ import (
 	"github.com/flarco/g/net"
 	"github.com/integrii/flaggy"
 	"github.com/jedib0t/go-pretty/table"
+	"github.com/kardianos/osext"
 	"github.com/samber/lo"
 	"github.com/spf13/cast"
 )
@@ -161,6 +162,7 @@ func serve(c *g.CliSC) (ok bool, err error) {
 
 	go s.Start()
 	go telemetry("serve")
+	go checkVersion()
 
 	<-ctx.Ctx.Done()
 
@@ -376,4 +378,32 @@ func telemetry(action string) {
 	)
 	net.ClientDo("POST", telemetryURL, strings.NewReader(g.Marshal(payload)), nil)
 
+}
+
+func checkVersion() {
+	if state.Version == "dev" {
+		return
+	}
+
+	instruction := "Please download here: https://docs.dbrest.io/installation"
+	execFileName, _ := osext.Executable()
+	switch {
+	case strings.Contains(execFileName, "homebrew"):
+		instruction = "Please run `brew upgrade dbrest-io/dbrest/dbrest`"
+	case strings.Contains(execFileName, "scoop"):
+		instruction = "Please run `scoop update dbrest`"
+	case execFileName == "/dbrest/dbrest" && os.Getenv("HOME") == "/dbrest":
+		instruction = "Please run `docker pull dbrest/dbrest` and recreate your container"
+	}
+
+	const url = "https://api.github.com/repos/dbrest-io/dbREST/tags"
+	_, respB, _ := net.ClientDo("GET", url, nil, nil)
+	arr := []map[string]any{}
+	g.JSONUnmarshal(respB, &arr)
+	if len(arr) > 0 && arr[0] != nil {
+		latest := cast.ToString(arr[0]["name"])
+		if latest > state.Version {
+			g.Warn("FYI there is a new dbREST version released (%s). %s", latest, instruction)
+		}
+	}
 }
