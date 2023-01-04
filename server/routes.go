@@ -11,7 +11,7 @@ import (
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
-var standardRoutes = []echo.Route{
+var StandardRoutes = []echo.Route{
 	{
 		Name:    "getStatus",
 		Method:  "GET",

@@ -26,7 +26,7 @@ func NewServer() (s *Server) {
 	}
 
 	// add routes
-	for _, route := range standardRoutes {
+	for _, route := range StandardRoutes {
 		route.Middlewares = append(route.Middlewares, middleware.Logger())
 		route.Middlewares = append(route.Middlewares, middleware.Recover())
 		s.EchoServer.AddRoute(route)

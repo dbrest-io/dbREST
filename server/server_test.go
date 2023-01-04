@@ -70,7 +70,7 @@ func TestServer(t *testing.T) {
 
 	// Test RW
 	missingTests := []string{}
-	for _, route := range standardRoutes {
+	for _, route := range StandardRoutes {
 		if t.Failed() {
 			break
 		}
@@ -154,7 +154,7 @@ func TestServer(t *testing.T) {
 
 	// Test R
 	headers["Authorization"] = tokenR
-	for _, route := range standardRoutes {
+	for _, route := range StandardRoutes {
 		if t.Failed() {
 			break
 		} else if !g.In(route.Name, "getTableSelect", "tableInsert", "submitSQL") {
@@ -200,7 +200,7 @@ func TestServer(t *testing.T) {
 
 	// Test W
 	headers["Authorization"] = tokenW
-	for _, route := range standardRoutes {
+	for _, route := range StandardRoutes {
 		if t.Failed() {
 			break
 		} else if !g.In(route.Name, "getTableSelect", "tableInsert", "submitSQL") {
