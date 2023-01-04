@@ -21,7 +21,7 @@ var (
 	mux sync.Mutex
 
 	// set a build time.
-	TelemetryURL = ""
+	RudderstackURL = ""
 )
 
 func init() {

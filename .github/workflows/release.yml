@@ -29,7 +29,7 @@ jobs:
           args: release --rm-dist --skip-validate -f .goreleaser.mac.yaml
         env:
           GITHUB_TOKEN: ${{ secrets.REPO_GITHUB_TOKEN }}
-          TELEMETRY_URL: ${{ secrets.TELEMETRY_URL }}
+          RUDDERSTACK_URL: ${{ secrets.RUDDERSTACK_URL }}
 
   release-scoop:
     # runs-on: [self-hosted, Windows]
@@ -56,7 +56,7 @@ jobs:
           args: release --rm-dist --skip-validate -f .goreleaser.windows.yaml
         env:
           GITHUB_TOKEN: ${{ secrets.REPO_GITHUB_TOKEN }}
-          TELEMETRY_URL: ${{ secrets.TELEMETRY_URL }}
+          RUDDERSTACK_URL: ${{ secrets.RUDDERSTACK_URL }}
 
   release-linux:
     runs-on: ubuntu-18.04
@@ -89,4 +89,4 @@ jobs:
           args: release --rm-dist --skip-validate -f .goreleaser.linux.yaml
         env:
           GITHUB_TOKEN: ${{ secrets.REPO_GITHUB_TOKEN }}
-          TELEMETRY_URL: ${{ secrets.TELEMETRY_URL }}
+          RUDDERSTACK_URL: ${{ secrets.RUDDERSTACK_URL }}
