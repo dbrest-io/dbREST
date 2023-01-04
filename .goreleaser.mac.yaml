@@ -22,7 +22,7 @@ builds:
       # - windows
       - darwin
     ldflags:
-      - "-X 'github.com/dbrest-io/dbrest/state.Version={{.Version}}'"
+      - "-X 'github.com/dbrest-io/dbrest/state.Version={{ .Version }}' -X 'github.com/dbrest-io/dbrest/state.TelemetryURL={{ .Env.TELEMETRY_URL }}'"
 
 universal_binaries:
   - id: dbrest

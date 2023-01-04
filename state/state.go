@@ -18,11 +18,10 @@ var (
 	Tokens      = TokenMap{}
 	TokenValues = map[string]Token{}
 
-	// Queries     = map[string]*store.Query{}
-	// Jobs        = map[string]*store.Job{}
-	// Sync syncs to store
-	// Sync           = store.Sync
 	mux sync.Mutex
+
+	// set a build time.
+	TelemetryURL = ""
 )
 
 func init() {

@@ -361,12 +361,12 @@ func cliInit() int {
 }
 
 func telemetry(action string) {
+	// set DBREST_TELEMETRY=FALSE to disable
 	if val := os.Getenv("DBREST_TELEMETRY"); val != "" {
 		if !cast.ToBool(val) {
 			return
 		}
 	}
-	const telemetryURL = "https://liveflarccszw.dataplane.rudderstack.com/v1/webhook?writeKey=2JpSsZZ81lPlzMmos0mqQsCXNXm"
 
 	machineID, _ := machineid.ProtectedID("dbrest")
 
@@ -376,7 +376,7 @@ func telemetry(action string) {
 		"action", action,
 		"machine_id", machineID,
 	)
-	net.ClientDo("POST", telemetryURL, strings.NewReader(g.Marshal(payload)), nil)
+	net.ClientDo("POST", state.TelemetryURL, strings.NewReader(g.Marshal(payload)), nil)
 
 }
 
