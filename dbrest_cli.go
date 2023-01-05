@@ -368,6 +368,7 @@ func telemetry(action string) {
 		}
 	}
 
+	// deterministic anonymous ID generated per machine
 	machineID, _ := machineid.ProtectedID("dbrest")
 
 	payload := g.M(

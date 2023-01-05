@@ -8,16 +8,31 @@ import (
 	"github.com/dbrest-io/dbrest/env"
 	"github.com/flarco/dbio/database"
 	"github.com/flarco/g"
+	"github.com/spf13/cast"
 	"gopkg.in/yaml.v3"
 )
 
 var (
+	NoRestriction   = false
 	Roles           = RoleMap{}
 	lastLoadedRoles time.Time
+	AllowAllRoleMap = RoleMap{
+		"*": Role{
+			"*": Grant{
+				AllowRead:  []string{"*"},
+				AllowWrite: []string{"*"},
+				AllowSQL:   AllowSQLAny,
+			},
+		},
+	}
 )
 
 func init() {
 	LoadRoles(true)
+
+	if val := os.Getenv("DBREST_NO_RESTRICTION"); val != "" {
+		NoRestriction = cast.ToBool(val)
+	}
 }
 
 // Role is a map of Grants per connection
@@ -71,6 +86,8 @@ func (rm RoleMap) HasAccess(connection string) bool {
 	for _, role := range rm {
 		if _, ok := role[connection]; ok {
 			return true
+		} else if _, ok := role["*"]; ok {
+			return true
 		}
 	}
 	return false
@@ -79,7 +96,12 @@ func (rm RoleMap) HasAccess(connection string) bool {
 func (rm RoleMap) GetPermissions(connection string) (perms Permissions) {
 	perms = Permissions{}
 	for _, role := range rm {
-		if grant, ok := role[connection]; ok {
+		grant, ok := role[connection]
+		if !ok {
+			grant, ok = role["*"]
+		}
+
+		if ok {
 			tables := grant.GetReadable(connection)
 			for _, table := range tables {
 				perms[table.FullName()] = PermissionRead
@@ -111,7 +133,12 @@ func (rm RoleMap) CanSQL(connection string) bool {
 }
 
 func (r Role) CanRead(connection string, table database.Table) bool {
-	if grant, ok := r[connection]; ok {
+	grant, ok := r[connection]
+	if !ok {
+		grant, ok = r["*"]
+	}
+
+	if ok {
 		rTables := grant.GetReadable(connection)
 		for _, rt := range rTables {
 			if rt.Schema == "" && rt.Name == "*" {
@@ -127,7 +154,12 @@ func (r Role) CanRead(connection string, table database.Table) bool {
 }
 
 func (r Role) CanWrite(connection string, table database.Table) bool {
-	if grant, ok := r[connection]; ok {
+	grant, ok := r[connection]
+	if !ok {
+		grant, ok = r["*"]
+	}
+
+	if ok {
 		wTables := grant.GetWritable(connection)
 		for _, wt := range wTables {
 			if wt.Schema == "" && wt.Name == "*" {
@@ -144,6 +176,8 @@ func (r Role) CanWrite(connection string, table database.Table) bool {
 
 func (r Role) CanSQL(connection string) bool {
 	if grant, ok := r[connection]; ok {
+		return grant.AllowSQL == AllowSQLAny
+	} else if grant, ok := r["*"]; ok {
 		return grant.AllowSQL == AllowSQLAny
 	}
 	return false

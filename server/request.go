@@ -47,23 +47,25 @@ func NewRequest(c echo.Context) Request {
 		echoCtx:     c,
 		Header:      c.Request().Header,
 		Roles:       state.RoleMap{},
-		Permissions: state.Permissions{
-			// "*": state.PermissionRead, // read access
-			// "*": state.PermissionReadWrite, // read/write access
-		},
+		Permissions: state.Permissions{},
 	}
 
 	req.ID = lo.Ternary(req.ID == "", c.QueryParam("id"), req.ID)
 	req.Schema = lo.Ternary(req.Schema == "", c.QueryParam("schema"), req.Schema)
 
 	// token -> roles -> grants
-	state.LoadTokens(false) // load tokens, do not force, cached & throttled
 	if authToken := c.Request().Header.Get("Authorization"); authToken != "" {
+		state.LoadTokens(false) // load tokens, do not force, cached & throttled
 		token, ok := state.ResolveToken(authToken)
 		if ok && !token.Disabled {
 			state.LoadRoles(false) // load roles, do not force, cached & throttled
 			req.Roles = state.GetRoleMap(token.Roles)
 			req.Permissions = req.Roles.GetPermissions(req.Connection)
+		}
+	} else if state.NoRestriction {
+		req.Roles = state.AllowAllRoleMap
+		req.Permissions = state.Permissions{
+			"*": state.PermissionReadWrite, // read/write access
 		}
 	}
 
