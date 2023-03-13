@@ -21,9 +21,52 @@ func getTableColumns(c echo.Context) (err error) {
 		return ErrJSON(http.StatusBadRequest, err, "invalid request")
 	}
 
-	resp, err := getSchemataColumns(req)
+	resp := NewResponse(req)
+
+	rf := func(c database.Connection, req Request) (data iop.Dataset, err error) {
+		tableColumns, err := c.GetTableColumns(&req.dbTable)
+		if err != nil {
+			err = g.Error(err, "could not get columns")
+			return
+		}
+
+		columns := iop.Columns{
+			{Name: "database_name", Type: iop.StringType},
+			{Name: "schema_name", Type: iop.StringType},
+			{Name: "table_name", Type: iop.StringType},
+			{Name: "table_type", Type: iop.StringType},
+			{Name: "column_id", Type: iop.IntegerType},
+			{Name: "column_name", Type: iop.BoolType},
+			{Name: "column_type", Type: iop.BoolType},
+		}
+		data = iop.NewDataset(columns)
+		if req.CanRead(req.dbTable) || req.CanWrite(req.dbTable) {
+			for _, column := range tableColumns {
+				row := []any{
+					req.Database,
+					req.Schema,
+					req.Table,
+					nil,
+					column.Position,
+					column.Name,
+					column.DbType,
+				}
+				data.Append(row)
+			}
+		}
+
+		data.Sort(0, 1, 2, 4)
+
+		// for middleware
+		req.echoCtx.Set("data", &data)
+
+		return
+	}
+
+	resp.data, err = ProcessRequest(req, rf)
 	if err != nil {
-		return ErrJSON(http.StatusInternalServerError, err, "could not get columns")
+		err = g.Error(err, "could not get columns")
+		return
 	}
 
 	return resp.Make()

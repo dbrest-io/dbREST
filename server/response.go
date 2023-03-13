@@ -24,18 +24,18 @@ type Response struct {
 }
 
 func NewResponse(req Request) Response {
-	return Response{
+	resp := Response{
 		Request: req,
 		ec:      req.echoCtx,
 		Status:  200,
 		Header:  req.echoCtx.Response().Header(),
 	}
+	resp.Header.Set("X-Request-ID", req.ID)
+	resp.Header.Set("Access-Control-Expose-Headers", "X-Request-ID, X-Request-Columns, X-Request-Status, X-Request-Continue")
+	return resp
 }
 
 func (r *Response) MakeStreaming() (err error) {
-	if r.Request.ID != "" {
-		r.Header.Set("dbREST-Request-ID", r.Request.ID)
-	}
 
 	if r.ds == nil {
 		return r.ec.String(http.StatusOK, "")
@@ -92,7 +92,7 @@ func (r *Response) MakeStreaming() (err error) {
 			r.ds.Context.Cancel()
 			g.LogError(g.Error(err, "could not encode json payload"))
 		}
-		out, _ := g.JSONMarshal(data.Records())
+		out, _ := g.JSONMarshal(data.Records(false))
 		respW.Write(out)
 	default:
 		r.Header.Set("Content-Type", "application/jsonlines")
@@ -117,7 +117,7 @@ func (r *Response) MakeStreaming() (err error) {
 	r.ec.Response().Flush()
 
 	ctx := r.ec.Request().Context()
-	for row := range r.ds.Rows {
+	for row := range r.ds.Rows() {
 
 		select {
 		case <-ctx.Done():
@@ -136,11 +136,9 @@ func (r *Response) MakeStreaming() (err error) {
 }
 
 func (r *Response) Make() (err error) {
-	if r.Request.ID != "" {
-		r.Header.Set("dbREST-Request-ID", r.Request.ID)
-	}
 
 	if r.Payload != nil {
+		r.Header.Set("Content-Type", "application/json")
 		return r.ec.JSON(r.Status, r.Payload)
 	}
 
@@ -168,7 +166,7 @@ func (r *Response) Make() (err error) {
 
 		if len(r.data.Columns) > 0 {
 			r.setHeaderColumns(r.data.Columns)
-			out = g.Marshal(r.data.Records())
+			out = g.Marshal(r.data.Records(false))
 		}
 	default:
 		r.Header.Set("Content-Type", "application/jsonlines")
@@ -193,5 +191,5 @@ func (r Response) setHeaderColumns(cols iop.Columns) {
 	columnsS := lo.Map(cols, func(c iop.Column, i int) any {
 		return []string{c.Name, string(c.Type), c.DbType}
 	})
-	r.Header.Set("dbREST-Request-Columns", g.Marshal(columnsS))
+	r.Header.Set("X-Request-Columns", g.Marshal(columnsS))
 }

@@ -70,6 +70,9 @@ func getConnectionDatabases(c echo.Context) (err error) {
 
 	resp.data.Sort(0, true)
 
+	// for middleware
+	req.echoCtx.Set("data", &resp.data)
+
 	return resp.Make()
 }
 
@@ -88,6 +91,7 @@ func getConnectionSchemas(c echo.Context) (err error) {
 			ts := state.SchemaAll(req.Connection, schema)
 			return req.CanRead(ts) || req.CanWrite(ts)
 		})
+
 		return
 	}
 
@@ -97,6 +101,9 @@ func getConnectionSchemas(c echo.Context) (err error) {
 	}
 
 	resp.data.Sort(0, true)
+
+	// for middleware
+	req.echoCtx.Set("data", &resp.data)
 
 	return resp.Make()
 }
@@ -193,6 +200,9 @@ func getSchemataTables(req Request) (resp Response, err error) {
 
 		data.Sort(0, 1, 2)
 
+		// for middleware
+		req.echoCtx.Set("data", &data)
+
 		return
 	}
 
@@ -246,6 +256,9 @@ func getSchemataColumns(req Request) (resp Response, err error) {
 		}
 
 		data.Sort(0, 1, 2, 4)
+
+		// for middleware
+		req.echoCtx.Set("data", &data)
 
 		return
 	}

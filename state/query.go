@@ -10,12 +10,14 @@ import (
 	"github.com/flarco/dbio/iop"
 	"github.com/flarco/g"
 	"github.com/jmoiron/sqlx"
+	"gopkg.in/yaml.v3"
 )
 
 // NewQuery creates a Query object
 func NewQuery(ctx context.Context) *Query {
 	q := new(Query)
 	q.Affected = -1
+	q.lastTouch = time.Now()
 	q.Context = g.NewContext(ctx)
 	q.Done = make(chan struct{})
 	return q
@@ -32,7 +34,7 @@ type Query struct {
 	Start   int64       `json:"start" query:"start" gorm:"index:idx_start"`
 	End     int64       `json:"end" query:"end"`
 	Status  QueryStatus `json:"status" query:"status"`
-	Error   string      `json:"error" query:"error"`
+	Err     string      `json:"err" query:"err"`
 	Headers Headers     `json:"headers" query:"headers" gorm:"headers"`
 
 	UpdatedDt time.Time       `json:"-" gorm:"autoUpdateTime"`
@@ -40,8 +42,9 @@ type Query struct {
 	Result    *sqlx.Rows      `json:"-" gorm:"-"`
 	Stream    *iop.Datastream `json:"-" gorm:"-"`
 	Done      chan struct{}   `json:"-" gorm:"-"`
-	Err       error           `json:"-" gorm:"-"`
+	Error     error           `json:"-" gorm:"-"`
 	Context   g.Context       `json:"-" gorm:"-"`
+	lastTouch time.Time       `json:"-" gorm:"-"`
 }
 
 type QueryStatus string
@@ -93,11 +96,14 @@ func SubmitOrGetQuery(q *Query, cont bool) (query *Query, err error) {
 		// pick up where left off
 		mux.Lock()
 		var ok bool
-		qId := query.ID
-		query, ok = Queries[query.ID]
+		query, ok = Queries[q.ID]
+		if ok {
+			query.lastTouch = time.Now()
+		}
 		mux.Unlock()
+
 		if !ok {
-			err = g.Error("could not find query %s to continue", qId)
+			err = g.Error("could not find query %s to continue", q.ID)
 			return
 		}
 	} else {
@@ -139,8 +145,8 @@ func (q *Query) submit() (err error) {
 
 	setError := func(err error) {
 		q.Status = QueryStatusErrored
-		q.Err = err
-		q.Error = g.ErrMsg(err)
+		q.Error = err
+		q.Err = g.ErrMsg(err)
 		q.End = time.Now().Unix()
 	}
 
@@ -152,19 +158,12 @@ func (q *Query) submit() (err error) {
 		return
 	}
 
+	err = q.ProcessCustomReq(conn)
+	g.LogError(err)
+
 	mux.Lock()
 	Queries[q.ID] = q
 	mux.Unlock()
-
-	// expire the query after 10 minutes
-	timer := time.NewTimer(time.Duration(10*60) * time.Second)
-	go func() {
-		<-timer.C
-		q.Close(false)
-		mux.Lock()
-		delete(Queries, q.ID)
-		mux.Unlock()
-	}()
 
 	q.Text = strings.TrimSuffix(q.Text, ";")
 
@@ -212,6 +211,50 @@ func (q *Query) submit() (err error) {
 	return
 }
 
+// ProcessCustomReq looks at the text for yaml parsing
+func (q *Query) ProcessCustomReq(conn database.Connection) (err error) {
+
+	// see if analysis req
+	if strings.HasPrefix(q.Text, "/*--") && strings.HasSuffix(q.Text, "--*/") {
+		// is data request in yaml or json
+		// /*--{"analysis":"field_count", "data": {...}} --*/
+		// /*--{"metadata":"ddl_table", "data": {...}} --*/
+		type analysisReq struct {
+			Analysis string                 `json:"analysis" yaml:"analysis"`
+			Metadata string                 `json:"metadata" yaml:"metadata"`
+			Data     map[string]interface{} `json:"data" yaml:"data"`
+		}
+
+		req := analysisReq{}
+		body := strings.TrimSuffix(strings.TrimPrefix(q.Text, "/*--"), "--*/")
+		err = yaml.Unmarshal([]byte(body), &req)
+		if err != nil {
+			err = g.Error(err, "could not parse yaml/json request")
+			return
+		}
+
+		sql := ""
+		switch {
+		case req.Analysis != "":
+			sql, err = conn.GetAnalysis(req.Analysis, req.Data)
+		case req.Metadata != "":
+			template, ok := conn.Template().Metadata[req.Metadata]
+			if !ok {
+				err = g.Error("metadata key '%s' not found", req.Metadata)
+			}
+			sql = g.Rm(template, req.Data)
+		}
+
+		if err != nil {
+			err = g.Error(err, "could not execute query")
+			return
+		}
+
+		q.Text = q.Text + "\n\n" + sql
+	}
+	return
+}
+
 // Close closes and cancels the query
 func (q *Query) Close(cancel bool) (err error) {
 	if cancel {
@@ -232,8 +275,8 @@ func (q *Query) ProcessResult() (err error) {
 	delete(Queries, q.ID)
 	mux.Unlock()
 
-	if q.Err != nil {
-		return q.Err
+	if q.Error != nil {
+		return q.Error
 	}
 
 	if q.Affected == -1 && q.Stream != nil {

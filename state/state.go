@@ -27,6 +27,9 @@ var (
 func init() {
 	// load first time
 	LoadConnections(true)
+
+	// routine loop
+	go loop()
 }
 
 // Connection is a connection
@@ -157,4 +160,29 @@ func GetConnInstance(connName, databaseName string) (conn database.Connection, e
 	// conn.Db().SetMaxIdleConns(2)
 
 	return
+}
+
+func ClearOldQueries() {
+	mux.Lock()
+	for k, q := range Queries {
+		if time.Since(q.lastTouch) > 10*time.Minute {
+			delete(Queries, k)
+		}
+	}
+	mux.Unlock()
+}
+
+func loop() {
+	ticker1Min := time.NewTicker(1 * time.Minute)
+	defer ticker1Min.Stop()
+	ticker10Min := time.NewTicker(10 * time.Minute)
+	defer ticker10Min.Stop()
+
+	for {
+		select {
+		case <-ticker1Min.C:
+		case <-ticker10Min.C:
+			go ClearOldQueries()
+		}
+	}
 }

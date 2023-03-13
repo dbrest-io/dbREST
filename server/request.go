@@ -3,6 +3,7 @@ package server
 import (
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/dbrest-io/dbrest/state"
@@ -53,19 +54,19 @@ func NewRequest(c echo.Context) Request {
 	req.ID = lo.Ternary(req.ID == "", c.QueryParam("id"), req.ID)
 	req.Schema = lo.Ternary(req.Schema == "", c.QueryParam("schema"), req.Schema)
 
-	// token -> roles -> grants
-	if authToken := c.Request().Header.Get("Authorization"); authToken != "" {
+	if state.NoRestriction {
+		req.Roles = state.AllowAllRoleMap
+		req.Permissions = state.Permissions{
+			"*": state.PermissionReadWrite, // read/write access
+		}
+	} else if authToken := c.Request().Header.Get("Authorization"); authToken != "" {
+		// token -> roles -> grants
 		state.LoadTokens(false) // load tokens, do not force, cached & throttled
 		token, ok := state.ResolveToken(authToken)
 		if ok && !token.Disabled {
 			state.LoadRoles(false) // load roles, do not force, cached & throttled
 			req.Roles = state.GetRoleMap(token.Roles)
 			req.Permissions = req.Roles.GetPermissions(req.Connection)
-		}
-	} else if state.NoRestriction {
-		req.Roles = state.AllowAllRoleMap
-		req.Permissions = state.Permissions{
-			"*": state.PermissionReadWrite, // read/write access
 		}
 	}
 
@@ -84,6 +85,9 @@ func NewRequest(c echo.Context) Request {
 		}
 	}
 	req.conn = conn
+
+	// set for middleware
+	c.Set("request", &req)
 
 	return req
 }
@@ -109,6 +113,10 @@ func (r *Request) CanRead(table database.Table) bool {
 	}
 
 	return false
+}
+
+func (r *Request) URL() *url.URL {
+	return r.echoCtx.Request().URL
 }
 
 func (r *Request) CanWrite(table database.Table) bool {

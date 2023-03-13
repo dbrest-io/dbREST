@@ -16,7 +16,6 @@ type Server struct {
 	Port       string
 	EchoServer *echo.Echo
 	StartTime  time.Time
-	Routes     []echo.Route
 }
 
 func NewServer() (s *Server) {

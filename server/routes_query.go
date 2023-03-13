@@ -42,6 +42,7 @@ func postConnectionCancel(c echo.Context) (err error) {
 	query := state.NewQuery(context.Background())
 	query.Conn = req.Connection
 	query.ID = req.ID
+	req.echoCtx.Set("query", query)
 
 	err = query.Cancel()
 	if err != nil {
@@ -72,11 +73,12 @@ func processQueryRequest(req Request) (err error) {
 		query.Limit = 500
 	}
 
-	cont := req.Header.Get("dbREST-Continue") != ""
+	cont := req.Header.Get("X-Request-Continue") != ""
 	query, err = state.SubmitOrGetQuery(query, cont)
 	if err != nil {
 		return ErrJSON(http.StatusInternalServerError, err, "could not get process query")
 	}
+	req.echoCtx.Set("query", query)
 
 	ticker := time.NewTicker(90 * time.Second)
 	defer ticker.Stop()
@@ -85,19 +87,22 @@ func processQueryRequest(req Request) (err error) {
 	case <-query.Done:
 		resp.ds = query.Stream
 		err = query.ProcessResult()
-		resp.Header.Set("dbREST-Request-Status", string(query.Status))
+		resp.Header.Set("X-Request-Status", string(query.Status))
 		if err != nil {
 			g.LogError(err)
 			result := g.ToMap(query)
-			result["error"] = g.ErrMsgSimple(err)
+			result["err"] = g.ErrMsgSimple(err)
 			resp.Payload = result
+			return resp.Make()
+		} else if query.Affected != -1 {
+			resp.Payload = g.M("affected", query.Affected)
 			return resp.Make()
 		}
 		return resp.MakeStreaming()
 	case <-ticker.C:
-		resp.Status = 202 // when status is 202, follow request with header "dbREST-Continue"
+		resp.Status = 202 // when status is 202, follow request with header "X-Request-Continue"
 		resp.Payload = g.ToMap(query)
-		resp.ec.Response().Header().Set("dbREST-Request-Status", string(query.Status))
+		resp.ec.Response().Header().Set("X-Request-Status", string(query.Status))
 	}
 
 	return resp.Make()
