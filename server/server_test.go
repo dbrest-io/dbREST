@@ -115,7 +115,7 @@ func TestServer(t *testing.T) {
 				g.Unmarshal(string(respBytes), &respMap)
 				assert.NoError(t, err, msg)
 				assert.Less(t, resp.StatusCode, 300, msg)
-				assert.NotEmpty(t, respMap["error"], msg)
+				assert.NotEmpty(t, respMap["err"], msg)
 			}()
 			time.Sleep(100 * time.Millisecond)
 		case "cancelSQL":
