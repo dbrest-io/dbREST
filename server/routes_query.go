@@ -62,6 +62,12 @@ func processQueryRequest(req Request) (err error) {
 		return ErrJSON(http.StatusBadRequest, err, "invalid request")
 	}
 
+	status202 := func(query *state.Query) {
+		resp.Status = 202 // when status is 202, follow request with header "X-Request-Continue"
+		resp.Payload = g.ToMap(query)
+		resp.Header.Set("X-Request-Status", string(query.Status))
+	}
+
 	query := state.NewQuery(context.Background())
 	query.Conn = req.Connection
 	query.Database = req.Database
@@ -75,10 +81,14 @@ func processQueryRequest(req Request) (err error) {
 
 	cont := req.Header.Get("X-Request-Continue") != ""
 	query, err = state.SubmitOrGetQuery(query, cont)
+	req.echoCtx.Set("query", query)
 	if err != nil {
 		return ErrJSON(http.StatusInternalServerError, err, "could not get process query")
+	} else if query.IsGenerated && !cont {
+		// send generated query to client
+		status202(query)
+		return resp.Make()
 	}
-	req.echoCtx.Set("query", query)
 
 	ticker := time.NewTicker(90 * time.Second)
 	defer ticker.Stop()
@@ -100,9 +110,7 @@ func processQueryRequest(req Request) (err error) {
 		}
 		return resp.MakeStreaming()
 	case <-ticker.C:
-		resp.Status = 202 // when status is 202, follow request with header "X-Request-Continue"
-		resp.Payload = g.ToMap(query)
-		resp.ec.Response().Header().Set("X-Request-Status", string(query.Status))
+		status202(query)
 	}
 
 	return resp.Make()

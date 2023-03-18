@@ -37,14 +37,16 @@ type Query struct {
 	Err     string      `json:"err" query:"err"`
 	Headers Headers     `json:"headers" query:"headers" gorm:"headers"`
 
-	UpdatedDt time.Time       `json:"-" gorm:"autoUpdateTime"`
-	Affected  int64           `json:"affected" gorm:"-"`
-	Result    *sqlx.Rows      `json:"-" gorm:"-"`
-	Stream    *iop.Datastream `json:"-" gorm:"-"`
-	Done      chan struct{}   `json:"-" gorm:"-"`
-	Error     error           `json:"-" gorm:"-"`
-	Context   g.Context       `json:"-" gorm:"-"`
-	lastTouch time.Time       `json:"-" gorm:"-"`
+	UpdatedDt   time.Time           `json:"-" gorm:"autoUpdateTime"`
+	Connection  database.Connection `json:"-" gorm:"-"`
+	Affected    int64               `json:"affected" gorm:"-"`
+	Result      *sqlx.Rows          `json:"-" gorm:"-"`
+	Stream      *iop.Datastream     `json:"-" gorm:"-"`
+	Done        chan struct{}       `json:"-" gorm:"-"`
+	Error       error               `json:"-" gorm:"-"`
+	Context     g.Context           `json:"-" gorm:"-"`
+	lastTouch   time.Time           `json:"-" gorm:"-"`
+	IsGenerated bool                `json:"-" gorm:"-"`
 }
 
 type QueryStatus string
@@ -107,8 +109,13 @@ func SubmitOrGetQuery(q *Query, cont bool) (query *Query, err error) {
 			return
 		}
 	} else {
+		err = q.prepare()
+		if err != nil {
+			err = g.Error(err, "could not prepare query")
+			return
+		}
 		// submit
-		go q.submit()
+		go q.Submit()
 		query = q
 	}
 
@@ -140,7 +147,7 @@ func (q *Query) Cancel() (err error) {
 	return
 }
 
-func (q *Query) submit() (err error) {
+func (q *Query) Submit() (err error) {
 	defer func() { q.Done <- struct{}{} }()
 
 	setError := func(err error) {
@@ -150,31 +157,14 @@ func (q *Query) submit() (err error) {
 		q.End = time.Now().Unix()
 	}
 
-	// get connection
-	conn, err := GetConnInstance(q.Conn, q.Database)
-	if err != nil {
-		err = g.Error(err, "could not get conn %s", q.Conn)
-		setError(err)
-		return
-	}
-
-	err = q.ProcessCustomReq(conn)
-	g.LogError(err)
-
-	mux.Lock()
-	Queries[q.ID] = q
-	mux.Unlock()
-
-	q.Text = strings.TrimSuffix(q.Text, ";")
-
 	q.Status = QueryStatusSubmitted
-	q.Context = g.NewContext(conn.Context().Ctx)
+	q.Context = g.NewContext(q.Connection.Context().Ctx)
 
 	g.Debug("--------------------------------------------------------------------- submitting %s", q.ID)
 
 	sqls := database.ParseSQLMultiStatements(q.Text)
 	if len(sqls) == 1 {
-		q.Stream, err = conn.StreamRowsContext(q.Context.Ctx, q.Text, g.M("limit", q.Limit))
+		q.Stream, err = q.Connection.StreamRowsContext(q.Context.Ctx, q.Text, g.M("limit", q.Limit))
 		if err != nil {
 			setError(err)
 			err = g.Error(err, "could not execute query")
@@ -183,21 +173,21 @@ func (q *Query) submit() (err error) {
 
 		q.Status = QueryStatusCompleted
 	} else {
-		_, err = conn.NewTransaction(q.Context.Ctx)
+		_, err = q.Connection.NewTransaction(q.Context.Ctx)
 		if err != nil {
 			setError(err)
 			err = g.Error(err, "could not start transaction")
 			return err
 		}
 
-		defer conn.Rollback()
-		res, err := conn.ExecMultiContext(q.Context.Ctx, q.Text)
+		defer q.Connection.Rollback()
+		res, err := q.Connection.ExecMultiContext(q.Context.Ctx, q.Text)
 		if err != nil {
 			setError(err)
 			err = g.Error(err, "could not execute queries")
 			return err
 		}
-		err = conn.Commit()
+		err = q.Connection.Commit()
 		if err != nil {
 			setError(err)
 			err = g.Error(err, "could not commit")
@@ -211,8 +201,32 @@ func (q *Query) submit() (err error) {
 	return
 }
 
-// ProcessCustomReq looks at the text for yaml parsing
-func (q *Query) ProcessCustomReq(conn database.Connection) (err error) {
+// processCustomReq looks at the text for yaml parsing
+func (q *Query) prepare() (err error) {
+
+	// get connection
+	q.Connection, err = GetConnInstance(q.Conn, q.Database)
+	if err != nil {
+		err = g.Error(err, "could not get conn %s", q.Conn)
+		return
+	}
+
+	err = q.processCustomReq()
+	if err != nil {
+		err = g.Error(err, "could not get templatized sql")
+		return
+	}
+
+	mux.Lock()
+	Queries[q.ID] = q
+	mux.Unlock()
+
+	q.Text = strings.TrimSuffix(q.Text, ";")
+
+	return nil
+}
+
+func (q *Query) processCustomReq() (err error) {
 
 	// see if analysis req
 	if strings.HasPrefix(q.Text, "/*--") && strings.HasSuffix(q.Text, "--*/") {
@@ -236,9 +250,9 @@ func (q *Query) ProcessCustomReq(conn database.Connection) (err error) {
 		sql := ""
 		switch {
 		case req.Analysis != "":
-			sql, err = conn.GetAnalysis(req.Analysis, req.Data)
+			sql, err = q.Connection.GetAnalysis(req.Analysis, req.Data)
 		case req.Metadata != "":
-			template, ok := conn.Template().Metadata[req.Metadata]
+			template, ok := q.Connection.Template().Metadata[req.Metadata]
 			if !ok {
 				err = g.Error("metadata key '%s' not found", req.Metadata)
 			}
@@ -251,6 +265,7 @@ func (q *Query) ProcessCustomReq(conn database.Connection) (err error) {
 		}
 
 		q.Text = q.Text + "\n\n" + sql
+		q.IsGenerated = true
 	}
 	return
 }
