@@ -4,8 +4,8 @@ go 1.19
 
 require (
 	github.com/denisbrodbeck/machineid v1.0.1
-	github.com/flarco/dbio v0.3.228
-	github.com/flarco/g v0.1.56
+	github.com/flarco/dbio v0.3.240
+	github.com/flarco/g v0.1.58
 	github.com/integrii/flaggy v1.5.2
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
 	github.com/jmoiron/sqlx v1.2.0
@@ -157,6 +157,7 @@ require (
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/viant/xunsafe v0.8.0 // indirect
 	github.com/xo/dburl v0.3.0 // indirect
+	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	go.mongodb.org/mongo-driver v1.10.0 // indirect
 	go.opencensus.io v0.23.0 // indirect
