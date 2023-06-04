@@ -403,7 +403,10 @@ func checkVersion() {
 	g.JSONUnmarshal(respB, &arr)
 	if len(arr) > 0 && arr[0] != nil {
 		latest := cast.ToString(arr[0]["name"])
-		if latest > state.Version {
+		isNew, err := g.CompareVersions(state.Version, latest)
+		if err != nil {
+			g.DebugLow("Error comparing versions: %s", err.Error())
+		} else if isNew {
 			g.Warn("FYI there is a new dbREST version released (%s). %s", latest, instruction)
 		}
 	}
