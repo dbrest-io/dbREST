@@ -4,8 +4,8 @@ go 1.19
 
 require (
 	github.com/denisbrodbeck/machineid v1.0.1
-	github.com/flarco/dbio v0.3.241
-	github.com/flarco/g v0.1.59
+	github.com/flarco/dbio v0.3.243
+	github.com/flarco/g v0.1.60
 	github.com/integrii/flaggy v1.5.2
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
 	github.com/jmoiron/sqlx v1.2.0
