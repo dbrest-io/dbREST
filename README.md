@@ -170,7 +170,7 @@ dbREST is in active developement. Here are some of the databases it connects to:
 * SQLite
 * SQL Server
 * Snowflake
-* DuckDB (coming soon)
+* DuckDB
 * ScyllaDB (coming soon)
 * Firebolt (coming soon)
 * Databricks (coming soon)
