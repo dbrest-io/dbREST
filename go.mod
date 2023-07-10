@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/denisbrodbeck/machineid v1.0.1
-	github.com/flarco/dbio v0.3.243
+	github.com/flarco/dbio v0.3.244
 	github.com/flarco/g v0.1.60
 	github.com/integrii/flaggy v1.5.2
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
@@ -173,6 +173,7 @@ require (
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df // indirect
+	gopkg.in/myesui/uuid.v1 v1.0.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gorm.io/driver/postgres v1.0.5 // indirect
 	gorm.io/driver/sqlite v1.1.4 // indirect
