@@ -36,13 +36,13 @@ release:
   header: |
     ## dbREST {{ .Tag }} ({{ .Date }})
 
-  scoops:
-    - name: dbrest
-      repository:
-        owner: dbrest-io
-        name: scoop-dbrest
-        branch: main
+scoops:
+  - name: dbrest
+    repository:
+      owner: dbrest-io
+      name: scoop-dbrest
+      branch: main
 
-  homepage: https:/github.com/dbrest-io/dbrest
+    homepage: https:/github.com/dbrest-io/dbrest
 
-  description: "dbREST is an API backend that you can put in front of your database. Ever wanted to spin up an API service in front of your Snowflake, MySQL or even SQLite database? Well, dbREST allows that!"
+    description: "dbREST is an API backend that you can put in front of your database. Ever wanted to spin up an API service in front of your Snowflake, MySQL or even SQLite database? Well, dbREST allows that!"
