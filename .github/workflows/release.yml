@@ -61,7 +61,7 @@ jobs:
           RUDDERSTACK_URL: ${{ secrets.RUDDERSTACK_URL }}
 
   release-linux:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     # runs-on: [self-hosted, Linux]
     timeout-minutes: 15
 
