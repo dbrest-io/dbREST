@@ -44,7 +44,7 @@ release:
 
 brews:
   - name: dbrest
-    tap:
+    repository:
       owner: dbrest-io
       name: homebrew-dbrest
       branch: main

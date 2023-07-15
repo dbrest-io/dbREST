@@ -27,7 +27,7 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release --rm-dist --skip-validate -f .goreleaser.mac.yaml
+          args: release --clean --skip-validate -f .goreleaser.mac.yaml
         env:
           GITHUB_TOKEN: ${{ secrets.REPO_GITHUB_TOKEN }}
           RUDDERSTACK_URL: ${{ secrets.RUDDERSTACK_URL }}
@@ -55,7 +55,7 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release --rm-dist --skip-validate -f .goreleaser.windows.yaml
+          args: release --clean --skip-validate -f .goreleaser.windows.yaml
         env:
           GITHUB_TOKEN: ${{ secrets.REPO_GITHUB_TOKEN }}
           RUDDERSTACK_URL: ${{ secrets.RUDDERSTACK_URL }}
@@ -89,7 +89,7 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release --rm-dist --skip-validate -f .goreleaser.linux.yaml
+          args: release --clean --skip-validate -f .goreleaser.linux.yaml
         env:
           GITHUB_TOKEN: ${{ secrets.REPO_GITHUB_TOKEN }}
           RUDDERSTACK_URL: ${{ secrets.RUDDERSTACK_URL }}

@@ -36,12 +36,12 @@ release:
   header: |
     ## dbREST {{ .Tag }} ({{ .Date }})
 
-scoop:
-  name: dbrest
-  bucket:
-    owner: dbrest-io
-    name: scoop-dbrest
-    branch: main
+scoops:
+  - name: dbrest
+    repository:
+      owner: dbrest-io
+      name: scoop-dbrest
+      branch: main
 
   homepage: https:/github.com/dbrest-io/dbrest
 
