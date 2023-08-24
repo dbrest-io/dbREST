@@ -192,7 +192,7 @@ func (p *Project) LoadConnections(force bool) (err error) {
 	} else {
 		// need to load for the project only
 		m := g.M()
-		g.JSONConvert(env.LoadDbRestEnvFile(p.EnvFile), &m)
+		g.JSONConvert(env.LoadEnvFile(p.EnvFile), &m)
 		profileConns, err := connection.ReadConnections(m)
 		if err != nil {
 			return g.Error(err, "could not read project env connections")

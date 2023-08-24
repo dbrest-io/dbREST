@@ -50,6 +50,7 @@ func TestServer(t *testing.T) {
 	}
 
 	os.Setenv(testConnName, testDbURL)
+	os.MkdirAll(testFolder, 0777)
 	ef := env.LoadDbRestEnvFile(path.Join(testFolder, "env.yaml"))
 	ef.Connections[testConnName] = g.M("url", testDbURL)
 	ef.WriteEnvFile()

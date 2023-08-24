@@ -26,3 +26,7 @@ func LoadDbRestEnvFile(envFile string) (ef env.EnvFile) {
 	Env.TopComment = "# Environment Credentials for dbREST\n# See https://docs.dbrest.io/\n"
 	return
 }
+
+func LoadEnvFile(envFile string) (ef env.EnvFile) {
+	return env.LoadEnvFile(envFile)
+}
