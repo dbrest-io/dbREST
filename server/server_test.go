@@ -28,18 +28,20 @@ var (
 		"Accept":       "application/json",
 		"Content-Type": "application/json",
 	}
-	testConn   = "SQLITE_TEST"
-	testSchema = ""
-	testTable  = ""
-	testID     = "12345"
-	tokenRW    = ""
-	tokenR     = ""
-	tokenW     = ""
-	randomRow  = func() (rec map[string]any) { return }
+	testConnName = "SQLITE_TEST"
+	testFolder   = "./test"
+	testDbURL    = "sqlite://./test.db"
+	testSchema   = ""
+	testTable    = ""
+	testID       = "12345"
+	tokenRW      = ""
+	tokenR       = ""
+	tokenW       = ""
+	randomRow    = func() (rec map[string]any) { return }
 )
 
 func TestServer(t *testing.T) {
-	// init
+	// set up db
 	deleteTestDB()
 	defer deleteTestDB()
 	err := createTestDB()
@@ -47,21 +49,44 @@ func TestServer(t *testing.T) {
 		return
 	}
 
-	// set roles & tokens
-	setTestRoles()
-	setTestToken()
-	headers["Authorization"] = tokenRW
+	os.Setenv(testConnName, testDbURL)
+	ef := env.LoadDbRestEnvFile(path.Join(testFolder, "env.yaml"))
+	ef.Connections[testConnName] = g.M("url", testDbURL)
+	ef.WriteEnvFile()
 
+	// start server
 	s := NewServer()
 	s.Port = "1456"
 	go s.Start()
 	defer s.Close()
 
+	// test default project
+	env.HomeDir = testFolder
+	projectDefault := state.DefaultProject()
+	testServer(t, s, projectDefault)
+
+	// test specific project
+	project := state.NewProject("test", testFolder, false)
+	headers["X-Project-ID"] = project.ID
+	testServer(t, s, project)
+}
+
+func testServer(t *testing.T, s *Server, project *state.Project) {
+	var err error
+
+	// set roles & tokens
+	setTestRoles(project)
+	setTestToken(project)
+	headers["Authorization"] = tokenRW
+
+	// project.LoadTokens(true)
+	project.LoadRoles(true)
+
 	time.Sleep(time.Second)
 
 	makeURL := func(route echo.Route) string {
 		url := g.F("%s%s", s.Hostname(), route.Path)
-		url = strings.ReplaceAll(url, ":connection", testConn)
+		url = strings.ReplaceAll(url, ":connection", testConnName)
 		url = strings.ReplaceAll(url, ":schema", testSchema)
 		url = strings.ReplaceAll(url, ":table", testTable)
 		url = strings.ReplaceAll(url, ":id", testID)
@@ -256,7 +281,6 @@ WITH RECURSIVE r(i) AS (
 SELECT i FROM r WHERE i = 1`
 
 func createTestDB() (err error) {
-	testDbURL := "sqlite://./test.db"
 	conn, err := database.NewConn(testDbURL)
 	if err != nil {
 		return err
@@ -278,9 +302,6 @@ func createTestDB() (err error) {
 	}
 
 	conn.Close()
-
-	os.Setenv("SQLITE_TEST", testDbURL)
-	state.LoadConnections(true)
 
 	countries := []string{
 		"Canada",
@@ -310,49 +331,49 @@ func createTestDB() (err error) {
 
 func deleteTestDB() { os.Remove("./test.db") }
 
-func setTestRoles() {
+func setTestRoles(project *state.Project) {
 	testRoleRW := state.Role{}
 	testRoleR := state.Role{}
 	testRoleW := state.Role{}
-	for connName := range state.Connections {
-		connName = strings.ToLower(connName)
-		testRoleRW[connName] = state.Grant{
-			AllowRead:  []string{"*"},
-			AllowWrite: []string{"*"},
-			AllowSQL:   state.AllowSQLAny,
-		}
-		testRoleR[connName] = state.Grant{
-			AllowRead:  []string{"main.place"},
-			AllowWrite: []string{},
-			AllowSQL:   state.AllowSQLDisable,
-		}
-		testRoleW[connName] = state.Grant{
-			AllowRead:  []string{},
-			AllowWrite: []string{"main.place"},
-			AllowSQL:   state.AllowSQLDisable,
-		}
+
+	connName := strings.ToLower(testConnName)
+	testRoleRW[connName] = state.Grant{
+		AllowRead:  []string{"*"},
+		AllowWrite: []string{"*"},
+		AllowSQL:   state.AllowSQLAny,
 	}
-	state.Roles = state.RoleMap{
+	testRoleR[connName] = state.Grant{
+		AllowRead:  []string{"main.place"},
+		AllowWrite: []string{},
+		AllowSQL:   state.AllowSQLDisable,
+	}
+	testRoleW[connName] = state.Grant{
+		AllowRead:  []string{},
+		AllowWrite: []string{"main.place"},
+		AllowSQL:   state.AllowSQLDisable,
+	}
+
+	project.Roles = state.RoleMap{
 		"role_rw": testRoleRW,
 		"role_r":  testRoleR,
 		"role_w":  testRoleW,
 	}
 }
 
-func setTestToken() {
-	env.HomeDirTokenFile = path.Join(".tokens.test")
+func setTestToken(project *state.Project) {
+	// project.TokenFile = path.Join(".tokens.test")
 	token := state.NewToken([]string{"role_rw"})
-	err := state.Tokens.Add("token_rw", token)
+	err := project.TokenAdd("token_rw", token)
 	g.LogFatal(err)
 	tokenRW = token.Token
 
 	token = state.NewToken([]string{"role_r"})
-	err = state.Tokens.Add("token_r", token)
+	err = project.TokenAdd("token_r", token)
 	g.LogFatal(err)
 	tokenR = token.Token
 
 	token = state.NewToken([]string{"role_w"})
-	err = state.Tokens.Add("token_w", token)
+	err = project.TokenAdd("token_w", token)
 	g.LogFatal(err)
 	tokenW = token.Token
 }

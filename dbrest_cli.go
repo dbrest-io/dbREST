@@ -140,20 +140,21 @@ var cliTokens = &g.CliSC{
 		},
 		{
 			Name:        "roles",
-			Description: "List all roles detected in " + env.HomeDirRolesFile,
+			Description: "List all roles detected in " + state.DefaultProject().RolesFile,
 		},
 	},
 	ExecProcess: tokens,
 }
 
 func serve(c *g.CliSC) (ok bool, err error) {
-	if len(state.Connections) == 0 {
+	project := state.DefaultProject()
+	if len(project.Connections) == 0 {
 		g.Warn("No connections have been defined. Please create some with command `dbrest conns` or put a URL in an environment variable. See https://docs.dbrest.io for more details.")
-		return true, g.Error("No connections have been defined. Please create file %s", env.HomeDirEnvFile)
-	} else if !g.PathExists(env.HomeDirRolesFile) {
+		return true, g.Error("No connections have been defined. Please create file %s", project.Directory)
+	} else if !g.PathExists(project.RolesFile) {
 		g.Warn("No roles have been defined. See https://docs.dbrest.io for more details.")
-		return true, g.Error("No roles have been defined. Please create file %s", env.HomeDirRolesFile)
-	} else if !g.PathExists(env.HomeDirTokenFile) {
+		return true, g.Error("No roles have been defined. Please create file %s", project.RolesFile)
+	} else if !g.PathExists(project.TokenFile) {
 		g.Warn("No tokens have been issued. Please issue with command `dbrest token`. See https://docs.dbrest.io for more details.")
 	}
 
@@ -172,7 +173,7 @@ func serve(c *g.CliSC) (ok bool, err error) {
 func conns(c *g.CliSC) (ok bool, err error) {
 	ok = true
 
-	ef := env.LoadDbRestEnvFile()
+	ef := env.LoadDbRestEnvFile(state.DefaultProject().EnvFile)
 	ec := connection.EnvConns{EnvFile: &ef}
 
 	switch c.UsedSC() {
@@ -230,6 +231,7 @@ func tokens(c *g.CliSC) (ok bool, err error) {
 	ok = true
 	name := strings.ToLower(cast.ToString(c.Vals["name"]))
 	roles := strings.Split(cast.ToString(c.Vals["roles"]), ",")
+	project := state.DefaultProject()
 
 	switch c.UsedSC() {
 	case "issue":
@@ -242,14 +244,14 @@ func tokens(c *g.CliSC) (ok bool, err error) {
 
 		regenerate := cast.ToBool(c.Vals["regenerate"])
 		token := state.NewToken(roles)
-		oldToken, existing := state.Tokens[name]
+		oldToken, existing := project.Tokens[name]
 		if existing {
 			if !regenerate {
 				token.Token = oldToken.Token
 			}
 		}
 
-		err = state.Tokens.Add(name, token)
+		err = project.TokenAdd(name, token)
 		if err != nil {
 			return ok, g.Error(err, "could not issue token")
 		}
@@ -267,7 +269,7 @@ func tokens(c *g.CliSC) (ok bool, err error) {
 		if name == "" {
 			return false, nil
 		}
-		err = state.Tokens.Remove(name)
+		err = project.TokenRemove(name)
 		if err != nil {
 			return ok, g.Error(err, "could not revoke token")
 		}
@@ -276,25 +278,25 @@ func tokens(c *g.CliSC) (ok bool, err error) {
 		if name == "" {
 			return false, nil
 		}
-		disabled, err := state.Tokens.Toggle(name)
+		disabled, err := project.TokenToggle(name)
 		if err != nil {
 			return ok, g.Error(err, "could not toggle token")
 		}
 		g.Info("token `%s` is now %s", name, lo.Ternary(disabled, "disabled", "enabled"))
 	case "list":
-		tokens := lo.Keys(state.Tokens)
+		tokens := lo.Keys(project.Tokens)
 		sort.Strings(tokens)
 		T := table.NewWriter()
 		T.AppendHeader(table.Row{"Token Name", "Enabled", "Roles"})
 		for _, name := range tokens {
-			token := state.Tokens[name]
+			token := project.Tokens[name]
 			T.AppendRow(
 				table.Row{name, cast.ToString(!token.Disabled), strings.Join(token.Roles, ",")},
 			)
 		}
 		println(T.Render())
 	case "roles":
-		err = state.LoadRoles(true)
+		err = project.LoadRoles(true)
 		if err != nil {
 			return true, g.Error(err, "could not load roles")
 		}
@@ -306,7 +308,7 @@ func tokens(c *g.CliSC) (ok bool, err error) {
 			{Name: "Object", Type: iop.StringType},
 		}
 		data := iop.NewDataset(columns)
-		for roleName, role := range state.Roles {
+		for roleName, role := range project.Roles {
 			for connName, grant := range role {
 				for _, object := range grant.AllowRead {
 					data.Append([]any{roleName, connName, "AllowRead", object})

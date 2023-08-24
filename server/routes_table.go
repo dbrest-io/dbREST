@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/dbrest-io/dbrest/state"
 	"github.com/flarco/dbio"
 	"github.com/flarco/dbio/database"
 	"github.com/flarco/dbio/iop"
@@ -83,7 +82,7 @@ func getTableSelect(c echo.Context) (err error) {
 
 	// construct SQL Query
 	{
-		conn, err := state.GetConnObject(req.Connection, "")
+		conn, err := req.Project.GetConnObject(req.Connection, "")
 		if err != nil {
 			err = ErrJSON(http.StatusNotFound, err, "could not find connection: %s", req.Connection)
 			return err

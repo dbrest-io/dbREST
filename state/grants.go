@@ -1,6 +1,7 @@
 package state
 
 import (
+	"github.com/flarco/dbio/connection"
 	"github.com/flarco/dbio/database"
 	"github.com/flarco/g"
 )
@@ -42,14 +43,7 @@ const (
 	// AllowSQLOnlySelect AllowSQLValue = "only_select"
 )
 
-func (gt Grant) GetReadable(connection string) (tables []database.Table) {
-	// get connection type
-	conn, err := GetConnObject(connection, "")
-	if err != nil {
-		g.Warn(err.Error())
-		return
-	}
-
+func (gt Grant) GetReadable(conn connection.Connection) (tables []database.Table) {
 	for _, t := range gt.AllowRead {
 		table, err := database.ParseTableName(t, conn.Type)
 		if err != nil {
@@ -61,14 +55,7 @@ func (gt Grant) GetReadable(connection string) (tables []database.Table) {
 	return
 }
 
-func (gt Grant) GetWritable(connection string) (tables []database.Table) {
-	// get connection type
-	conn, err := GetConnObject(connection, "")
-	if err != nil {
-		g.Warn(err.Error())
-		return
-	}
-
+func (gt Grant) GetWritable(conn connection.Connection) (tables []database.Table) {
 	for _, t := range gt.AllowWrite {
 		table, err := database.ParseTableName(t, conn.Type)
 		if err != nil {
@@ -78,15 +65,4 @@ func (gt Grant) GetWritable(connection string) (tables []database.Table) {
 		tables = append(tables, table)
 	}
 	return
-}
-
-// SchemaAll returns schema.*
-// notation for all tables in a schema
-func SchemaAll(connection, schema string) database.Table {
-	conn, err := GetConnObject(connection, "")
-	if err != nil {
-		return database.Table{}
-	}
-	table, _ := database.ParseTableName(schema+".*", conn.Type)
-	return table
 }

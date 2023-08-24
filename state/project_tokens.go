@@ -3,20 +3,11 @@ package state
 import (
 	"os"
 	"strings"
-	"sync"
 	"time"
 
-	"github.com/dbrest-io/dbrest/env"
 	"github.com/flarco/g"
 	"github.com/samber/lo"
 )
-
-func init() {
-	LoadTokens(true)
-}
-
-var tmMux sync.Mutex
-var lastLoadedTokens time.Time
 
 // TokenMap is map of string to token
 type TokenMap map[string]Token
@@ -28,56 +19,56 @@ type Token struct {
 	IssuedAt time.Time `json:"issued_at"`
 }
 
-func LoadTokens(force bool) (err error) {
-	if !(force || time.Since(lastLoadedTokens) > (5*time.Second)) {
+func (p *Project) LoadTokens(force bool) (err error) {
+	if !(force || time.Since(p.lastLoadedTokens) > (5*time.Second)) {
 		return
 	}
 
-	if !g.PathExists(env.HomeDirTokenFile) {
-		os.WriteFile(env.HomeDirTokenFile, []byte("{}"), 0644)
+	if !g.PathExists(p.TokenFile) {
+		os.WriteFile(p.TokenFile, []byte("{}"), 0644)
 	}
 
-	bytes, _ := os.ReadFile(env.HomeDirTokenFile)
-	err = g.JSONUnmarshal(bytes, &Tokens)
+	bytes, _ := os.ReadFile(p.TokenFile)
+	err = g.JSONUnmarshal(bytes, &p.Tokens)
 	if err != nil {
 		err = g.Error(err, "could not unmarshal token map")
 	}
 
 	// populate token values map
-	for _, token := range Tokens {
-		TokenValues[token.Token] = token
+	for _, token := range p.Tokens {
+		p.TokenValues[token.Token] = token
 	}
 
-	lastLoadedTokens = time.Now()
+	p.lastLoadedTokens = time.Now()
 
 	return
 }
 
-func ResolveToken(value string) (token Token, ok bool) {
-	tmMux.Lock()
-	token, ok = TokenValues[value]
-	tmMux.Unlock()
+func (p *Project) ResolveToken(value string) (token Token, ok bool) {
+	p.mux.Lock()
+	token, ok = p.TokenValues[value]
+	p.mux.Unlock()
 	return
 }
 
-func (tm TokenMap) Get(name string, token Token) (err error) {
-	tmMux.Lock()
-	tm[name] = token
-	tmMux.Unlock()
+func (p *Project) TokenGet(name string, token Token) (err error) {
+	p.mux.Lock()
+	p.Tokens[name] = token
+	p.mux.Unlock()
 
-	err = tm.Save()
+	err = p.TokenSave()
 	if err != nil {
 		err = g.Error(err, "could not update token map")
 	}
 	return
 }
 
-func (tm TokenMap) Add(name string, token Token) (err error) {
+func (p *Project) TokenAdd(name string, token Token) (err error) {
 	// check roles
-	roles := lo.Keys(Roles)
+	roles := lo.Keys(p.Roles)
 	if len(roles) == 0 {
 		g.Warn("No roles have been defined. See https://docs.dbrest.io")
-		return g.Error("No roles have been defined. Please create file %s", env.HomeDirRolesFile)
+		return g.Error("No roles have been defined. Please create file %s", p.RolesFile)
 	}
 
 	for _, role := range token.Roles {
@@ -87,12 +78,12 @@ func (tm TokenMap) Add(name string, token Token) (err error) {
 		}
 	}
 
-	tmMux.Lock()
-	tm[name] = token
-	TokenValues[token.Token] = token
-	tmMux.Unlock()
+	p.mux.Lock()
+	p.Tokens[name] = token
+	p.TokenValues[token.Token] = token
+	p.mux.Unlock()
 
-	err = tm.Save()
+	err = p.TokenSave()
 	if err != nil {
 		err = g.Error(err, "could not update token map")
 	}
@@ -100,20 +91,20 @@ func (tm TokenMap) Add(name string, token Token) (err error) {
 	return
 }
 
-func (tm TokenMap) Toggle(name string) (disabled bool, err error) {
-	tmMux.Lock()
-	token, ok := tm[name]
+func (p *Project) TokenToggle(name string) (disabled bool, err error) {
+	p.mux.Lock()
+	token, ok := p.Tokens[name]
 	if !ok {
 		return disabled, g.Error("token %s does not exist", name)
 	}
 
 	token.Disabled = !token.Disabled
 	disabled = token.Disabled
-	tm[name] = token
-	TokenValues[token.Token] = token
-	tmMux.Unlock()
+	p.Tokens[name] = token
+	p.TokenValues[token.Token] = token
+	p.mux.Unlock()
 
-	err = tm.Save()
+	err = p.TokenSave()
 	if err != nil {
 		err = g.Error(err, "could not update token map")
 	}
@@ -121,28 +112,28 @@ func (tm TokenMap) Toggle(name string) (disabled bool, err error) {
 	return
 }
 
-func (tm TokenMap) Remove(name string) (err error) {
-	tmMux.Lock()
-	token, ok := tm[name]
+func (p *Project) TokenRemove(name string) (err error) {
+	p.mux.Lock()
+	token, ok := p.Tokens[name]
 	if !ok {
 		return g.Error("token %s does not exist", name)
 	}
 
-	delete(tm, name)
-	delete(TokenValues, token.Token)
-	tmMux.Unlock()
+	delete(p.Tokens, name)
+	delete(p.TokenValues, token.Token)
+	p.mux.Unlock()
 
-	err = tm.Save()
+	err = p.TokenSave()
 	if err != nil {
 		err = g.Error(err, "could not update token map")
 	}
 	return
 }
 
-func (tm *TokenMap) Save() (err error) {
-	tmMux.Lock()
-	defer tmMux.Unlock()
-	err = os.WriteFile(env.HomeDirTokenFile, []byte(g.Marshal(tm)), 0644)
+func (p *Project) TokenSave() (err error) {
+	p.mux.Lock()
+	defer p.mux.Unlock()
+	err = os.WriteFile(p.TokenFile, []byte(g.Marshal(p.Tokens)), 0644)
 	if err != nil {
 		err = g.Error(err, "could not write token map")
 	}

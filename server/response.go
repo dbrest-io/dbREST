@@ -31,7 +31,7 @@ func NewResponse(req Request) Response {
 		Header:  req.echoCtx.Response().Header(),
 	}
 	resp.Header.Set("X-Request-ID", req.ID)
-	resp.Header.Set("Access-Control-Expose-Headers", "X-Request-ID, X-Request-Columns, X-Request-Status, X-Request-Continue")
+	resp.Header.Set("Access-Control-Expose-Headers", "X-Request-ID, X-Request-Columns, X-Request-Status, X-Request-Continue, X-Project-ID")
 	return resp
 }
 

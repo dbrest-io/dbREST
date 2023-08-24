@@ -39,7 +39,7 @@ func postConnectionCancel(c echo.Context) (err error) {
 		return g.ErrJSON(http.StatusForbidden, g.Error("Not allowed to cancel"))
 	}
 
-	query := state.NewQuery(context.Background())
+	query := req.Project.NewQuery(context.Background())
 	query.Conn = req.Connection
 	query.ID = req.ID
 	req.echoCtx.Set("query", query)
@@ -68,7 +68,7 @@ func processQueryRequest(req Request) (err error) {
 		resp.Header.Set("X-Request-Status", string(query.Status))
 	}
 
-	query := state.NewQuery(context.Background())
+	query := req.Project.NewQuery(context.Background())
 	query.Conn = req.Connection
 	query.Database = req.Database
 	query.Text = req.Query

@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/dbrest-io/dbrest/state"
 	"github.com/flarco/dbio/database"
 	"github.com/flarco/dbio/iop"
 	"github.com/flarco/g"
@@ -22,7 +21,7 @@ func getConnections(c echo.Context) (err error) {
 	}
 
 	// load fresh connections
-	state.LoadConnections(true)
+	req.Project.LoadConnections(true)
 
 	columns := iop.Columns{
 		{Name: "name", Type: iop.StringType},
@@ -31,7 +30,7 @@ func getConnections(c echo.Context) (err error) {
 		{Name: "source", Type: iop.StringType},
 	}
 	resp.data = iop.NewDataset(columns)
-	for _, conn := range state.Connections {
+	for _, conn := range req.Project.Connections {
 		connName := strings.ToLower(conn.Conn.Info().Name)
 		if !req.Roles.HasAccess(connName) {
 			continue
@@ -88,7 +87,7 @@ func getConnectionSchemas(c echo.Context) (err error) {
 		data, err = c.GetSchemas()
 		data.Rows = lo.Filter(data.Rows, func(row []any, i int) bool {
 			schema := strings.ToLower(cast.ToString(row[0]))
-			ts := state.SchemaAll(req.Connection, schema)
+			ts := req.Project.SchemaAll(req.Connection, schema)
 			return req.CanRead(ts) || req.CanWrite(ts)
 		})
 

@@ -1,7 +1,6 @@
 package state
 
 import (
-	"context"
 	"database/sql/driver"
 	"strings"
 	"time"
@@ -13,19 +12,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// NewQuery creates a Query object
-func NewQuery(ctx context.Context) *Query {
-	q := new(Query)
-	q.Affected = -1
-	q.lastTouch = time.Now()
-	q.Context = g.NewContext(ctx)
-	q.Done = make(chan struct{})
-	return q
-}
-
 // Query represents a query
 type Query struct {
 	ID       string `json:"id" query:"id" gorm:"primaryKey"`
+	Project  string `json:"project" query:"project" gorm:"index"`
 	Conn     string `json:"conn" query:"conn" gorm:"index"`
 	Database string `json:"database" query:"database" gorm:"index"`
 	Text     string `json:"text" query:"text"`
@@ -95,10 +85,16 @@ func (r Rows) Value() (driver.Value, error) {
 
 func SubmitOrGetQuery(q *Query, cont bool) (query *Query, err error) {
 	if cont {
+
+		proj := LoadProject(q.Project)
+		if proj == nil {
+			return query, g.Error("unable to load project %s", q.Project)
+		}
+
 		// pick up where left off
 		mux.Lock()
 		var ok bool
-		query, ok = Queries[q.ID]
+		query, ok = proj.Queries[q.ID]
 		if ok {
 			query.lastTouch = time.Now()
 		}
@@ -124,8 +120,14 @@ func SubmitOrGetQuery(q *Query, cont bool) (query *Query, err error) {
 
 func (q *Query) Cancel() (err error) {
 	id := q.ID
+
+	proj := LoadProject(q.Project)
+	if proj == nil {
+		return g.Error("unable to load project %s", q.Project)
+	}
+
 	mux.Lock()
-	q, ok := Queries[id]
+	q, ok := proj.Queries[id]
 	mux.Unlock()
 	if !ok {
 		err = g.Error("could not find query %s", id)
@@ -141,7 +143,7 @@ func (q *Query) Cancel() (err error) {
 	q.Status = QueryStatusCancelled
 
 	mux.Lock()
-	delete(Queries, q.ID)
+	delete(proj.Queries, q.ID)
 	mux.Unlock()
 
 	return
@@ -205,7 +207,12 @@ func (q *Query) Submit() (err error) {
 func (q *Query) prepare() (err error) {
 
 	// get connection
-	q.Connection, err = GetConnInstance(q.Conn, q.Database)
+	proj := LoadProject(q.Project)
+	if proj == nil {
+		return g.Error("unable to load project %s", q.Project)
+	}
+
+	q.Connection, err = proj.GetConnInstance(q.Conn, q.Database)
 	if err != nil {
 		err = g.Error(err, "could not get conn %s", q.Conn)
 		return
@@ -218,7 +225,7 @@ func (q *Query) prepare() (err error) {
 	}
 
 	mux.Lock()
-	Queries[q.ID] = q
+	proj.Queries[q.ID] = q
 	mux.Unlock()
 
 	q.Text = strings.TrimSuffix(q.Text, ";")
@@ -285,9 +292,16 @@ func (q *Query) Close(cancel bool) (err error) {
 }
 
 func (q *Query) ProcessResult() (err error) {
+
+	proj := LoadProject(q.Project)
+	if proj == nil {
+		return g.Error("unable to load project %s", q.Project)
+	}
+
 	// delete query from map
 	mux.Lock()
-	delete(Queries, q.ID)
+	delete(proj.Queries, q.ID)
+
 	mux.Unlock()
 
 	if q.Error != nil {

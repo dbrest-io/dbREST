@@ -29,6 +29,7 @@ type Request struct {
 	Procedure  string `json:"procedure" query:"procedure"`
 	Data       any    `json:"data" query:"data"`
 
+	Project     *state.Project        `json:"-" query:"-"`
 	conn        connection.Connection `json:"-" query:"-"`
 	Header      http.Header           `json:"-" query:"-"`
 	dbTable     database.Table        `json:"-" query:"-"`
@@ -51,27 +52,22 @@ func NewRequest(c echo.Context) Request {
 		Permissions: state.Permissions{},
 	}
 
+	// set for middleware
+	defer func() { c.Set("request", &req) }()
+
 	req.ID = lo.Ternary(req.ID == "", c.QueryParam("id"), req.ID)
 	req.Schema = lo.Ternary(req.Schema == "", c.QueryParam("schema"), req.Schema)
 
-	if state.NoRestriction {
-		req.Roles = state.AllowAllRoleMap
-		req.Permissions = state.Permissions{
-			"*": state.PermissionReadWrite, // read/write access
-		}
-	} else if authToken := c.Request().Header.Get("Authorization"); authToken != "" {
-		// token -> roles -> grants
-		state.LoadTokens(false) // load tokens, do not force, cached & throttled
-		token, ok := state.ResolveToken(authToken)
-		if ok && !token.Disabled {
-			state.LoadRoles(false) // load roles, do not force, cached & throttled
-			req.Roles = state.GetRoleMap(token.Roles)
-			req.Permissions = req.Roles.GetPermissions(req.Connection)
-		}
+	// set project
+	projectName := req.Header.Get("X-Project-ID")
+	projectName = lo.Ternary(projectName == "", state.DefaultProjectID, projectName)
+	req.Project = state.LoadProject(projectName)
+	if req.Project == nil {
+		return req
 	}
 
 	// parse table name
-	conn, err := state.GetConnObject(req.Connection, "")
+	conn, err := req.Project.GetConnObject(req.Connection, "")
 	if err == nil && req.Schema != "" {
 		if req.Table != "" {
 			fullName := req.Schema + "." + req.Table
@@ -86,8 +82,22 @@ func NewRequest(c echo.Context) Request {
 	}
 	req.conn = conn
 
-	// set for middleware
-	c.Set("request", &req)
+	// set permissions
+	if req.Project.NoRestriction {
+		req.Roles = state.AllowAllRoleMap
+		req.Permissions = state.Permissions{
+			"*": state.PermissionReadWrite, // read/write access
+		}
+	} else if authToken := c.Request().Header.Get("Authorization"); authToken != "" {
+		// token -> roles -> grants
+		req.Project.LoadTokens(false) // load tokens, do not force, cached & throttled
+		token, ok := req.Project.ResolveToken(authToken)
+		if ok && !token.Disabled {
+			req.Project.LoadRoles(false) // load roles, do not force, cached & throttled
+			req.Roles = req.Project.GetRoleMap(token.Roles)
+			req.Permissions = req.Roles.GetPermissions(conn)
+		}
+	}
 
 	return req
 }
@@ -98,8 +108,7 @@ func (r *Request) CanRead(table database.Table) bool {
 			return true
 		}
 	}
-
-	ts := state.SchemaAll(r.Connection, table.Schema)
+	ts := r.Project.SchemaAll(r.Connection, table.Schema)
 	if p, ok := r.Permissions[ts.FullName()]; ok {
 		if p.CanRead() {
 			return true
@@ -126,7 +135,7 @@ func (r *Request) CanWrite(table database.Table) bool {
 		}
 	}
 
-	ts := state.SchemaAll(r.Connection, table.Schema)
+	ts := r.Project.SchemaAll(r.Connection, table.Schema)
 	if p, ok := r.Permissions[ts.FullName()]; ok {
 		if p.CanWrite() {
 			return true
@@ -240,6 +249,12 @@ const (
 
 func (r *Request) Validate(checks ...requestCheck) (err error) {
 	eG := g.ErrorGroup{}
+
+	// always check project
+	if r.Project == nil {
+		eG.Add(g.Error("missing request value for: project"))
+	}
+
 	for _, check := range checks {
 		switch check {
 		case reqCheckName:
@@ -287,7 +302,7 @@ func (r *Request) Validate(checks ...requestCheck) (err error) {
 
 	// token has role
 	if len(r.Roles) == 0 {
-		return g.Error("Invalid token or forbidden")
+		eG.Add(g.Error("Invalid token or forbidden"))
 	}
 
 	return eG.Err()
@@ -298,7 +313,7 @@ type ReqFunction func(c database.Connection, req Request) (iop.Dataset, error)
 
 // ProcessRequest processes the request with the given function
 func ProcessRequest(req Request, reqFunc ReqFunction) (data iop.Dataset, err error) {
-	c, err := state.GetConnInstance(req.Connection, req.Database)
+	c, err := req.Project.GetConnInstance(req.Connection, req.Database)
 	if err != nil {
 		err = g.Error(err, "could not get conn %s", req.Connection)
 		return
