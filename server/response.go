@@ -92,7 +92,9 @@ func (r *Response) MakeStreaming() (err error) {
 			r.ds.Context.Cancel()
 			g.LogError(g.Error(err, "could not encode json payload"))
 		}
-		out, _ := g.JSONMarshal(data.Records(false))
+		// convert all values to string since JS can truncate int values
+		// above Number.MAX_SAFE_INTEGER
+		out, _ := g.JSONMarshal(data.StringRecords(false))
 		respW.Write(out)
 	default:
 		r.Header.Set("Content-Type", "application/jsonlines")
