@@ -4,12 +4,14 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/flarco/dbio/iop"
 	"github.com/flarco/g"
 	"github.com/flarco/g/csv"
 	"github.com/labstack/echo/v5"
 	"github.com/samber/lo"
+	"github.com/spf13/cast"
 )
 
 type Response struct {
@@ -94,7 +96,7 @@ func (r *Response) MakeStreaming() (err error) {
 		}
 		// convert all values to string since JS can truncate int values
 		// above Number.MAX_SAFE_INTEGER
-		out, _ := g.JSONMarshal(data.StringRecords(false))
+		out, _ := g.JSONMarshal(StringRecords(&data))
 		respW.Write(out)
 	default:
 		r.Header.Set("Content-Type", "application/jsonlines")
@@ -194,4 +196,26 @@ func (r Response) setHeaderColumns(cols iop.Columns) {
 		return []string{c.Name, string(c.Type), c.DbType}
 	})
 	r.Header.Set("X-Request-Columns", g.Marshal(columnsS))
+}
+
+// Records return rows of maps or string values
+func StringRecords(data *iop.Dataset) []map[string]interface{} {
+	records := make([]map[string]interface{}, len(data.Rows))
+	for i, row := range data.Rows {
+		rec := map[string]interface{}{}
+		for j, field := range data.GetFields(false) {
+			switch v := row[j].(type) {
+			case nil:
+				rec[field] = nil
+			case time.Time:
+				rec[field] = strings.ReplaceAll(v.Format("2006-01-02 15:04:05.000000Z07"), " 00:00:00.000000Z", "")
+			case *time.Time:
+				rec[field] = strings.ReplaceAll(v.Format("2006-01-02 15:04:05.000000Z07"), " 00:00:00.000000Z", "")
+			default:
+				rec[field] = cast.ToString(v)
+			}
+		}
+		records[i] = rec
+	}
+	return records
 }
