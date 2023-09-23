@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/denisbrodbeck/machineid v1.0.1
-	github.com/flarco/dbio v0.3.267
+	github.com/flarco/dbio v0.3.268
 	github.com/flarco/g v0.1.61
 	github.com/integrii/flaggy v1.5.2
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
