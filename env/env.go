@@ -7,17 +7,22 @@ import (
 )
 
 var (
-	HomeDir = os.Getenv("DBREST_HOME_DIR")
-	Env     = &env.EnvFile{}
+	HomeDir        = os.Getenv("DBREST_HOME_DIR")
+	HomeDirEnvFile = ""
+	Env            = &env.EnvFile{}
 )
 
 func init() {
 
 	HomeDir = env.SetHomeDir("dbrest")
+	HomeDirEnvFile = env.GetEnvFilePath(HomeDir)
 
 	// other sources of creds
-	env.SetHomeDir("sling")  // https://github.com/slingdata-io/sling
-	env.SetHomeDir("dbrest") // https://github.com/dbrest-io/dbrest
+	env.SetHomeDir("sling") // https://github.com/slingdata-io/sling
+	env.SetHomeDir("dbnet") // https://github.com/dbnet-io/dbnet
+
+	// create env file if not exists
+	os.MkdirAll(HomeDir, 0755)
 }
 
 func LoadDbRestEnvFile(envFile string) (ef env.EnvFile) {
