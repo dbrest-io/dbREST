@@ -1,9 +1,9 @@
 package state
 
 import (
-	"github.com/flarco/dbio/connection"
-	"github.com/flarco/dbio/database"
 	"github.com/flarco/g"
+	"github.com/slingdata-io/sling-cli/core/dbio/connection"
+	"github.com/slingdata-io/sling-cli/core/dbio/database"
 )
 
 type Grant struct {

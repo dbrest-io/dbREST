@@ -3,7 +3,7 @@ package state
 import (
 	"strings"
 
-	"github.com/flarco/dbio/connection"
+	"github.com/slingdata-io/sling-cli/core/dbio/connection"
 )
 
 var (

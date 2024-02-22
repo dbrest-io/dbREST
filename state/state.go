@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/flarco/dbio/connection"
 	"github.com/flarco/g"
+	"github.com/slingdata-io/sling-cli/core/dbio/connection"
 )
 
 var (

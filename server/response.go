@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/flarco/dbio/iop"
 	"github.com/flarco/g"
 	"github.com/flarco/g/csv"
 	"github.com/labstack/echo/v5"
 	"github.com/samber/lo"
+	"github.com/slingdata-io/sling-cli/core/dbio/iop"
 	"github.com/spf13/cast"
 )
 

@@ -3,7 +3,7 @@ package env
 import (
 	"os"
 
-	env "github.com/flarco/dbio/env"
+	env "github.com/slingdata-io/sling-cli/core/dbio/env"
 )
 
 var (
@@ -16,6 +16,10 @@ func init() {
 
 	HomeDir = env.SetHomeDir("dbrest")
 	HomeDirEnvFile = env.GetEnvFilePath(HomeDir)
+
+	if content := os.Getenv("DBREST_ENV_YAML"); content != "" {
+		os.Setenv("ENV_YAML", content)
+	}
 
 	// other sources of creds
 	env.SetHomeDir("sling") // https://github.com/slingdata-io/sling

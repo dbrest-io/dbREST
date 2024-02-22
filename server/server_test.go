@@ -9,10 +9,10 @@ import (
 
 	"github.com/dbrest-io/dbrest/env"
 	"github.com/dbrest-io/dbrest/state"
-	"github.com/flarco/dbio/database"
 	"github.com/flarco/g"
 	"github.com/flarco/g/net"
 	"github.com/labstack/echo/v5"
+	"github.com/slingdata-io/sling-cli/core/dbio/database"
 	"github.com/spf13/cast"
 	"github.com/stretchr/testify/assert"
 )

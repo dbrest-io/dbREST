@@ -10,14 +10,14 @@ import (
 	"github.com/dbrest-io/dbrest/server"
 	"github.com/dbrest-io/dbrest/state"
 	"github.com/denisbrodbeck/machineid"
-	"github.com/flarco/dbio/connection"
-	"github.com/flarco/dbio/iop"
 	"github.com/flarco/g"
 	"github.com/flarco/g/net"
 	"github.com/integrii/flaggy"
 	"github.com/jedib0t/go-pretty/table"
 	"github.com/kardianos/osext"
 	"github.com/samber/lo"
+	"github.com/slingdata-io/sling-cli/core/dbio/connection"
+	"github.com/slingdata-io/sling-cli/core/dbio/iop"
 	"github.com/spf13/cast"
 )
 
