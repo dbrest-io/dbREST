@@ -10,6 +10,7 @@ import (
 	"github.com/flarco/g"
 	"github.com/labstack/echo/v5"
 	"github.com/samber/lo"
+	"github.com/slingdata-io/sling-cli/core/dbio"
 	"github.com/slingdata-io/sling-cli/core/dbio/connection"
 	"github.com/slingdata-io/sling-cli/core/dbio/database"
 	"github.com/slingdata-io/sling-cli/core/dbio/filesys"
@@ -185,11 +186,11 @@ func (req *Request) GetDatastream() (ds *iop.Datastream, err error) {
 		}
 
 		switch ft {
-		case filesys.FileTypeCsv:
+		case dbio.FileTypeCsv:
 			err = ds.ConsumeCsvReader(reader)
-		case filesys.FileTypeXml:
+		case dbio.FileTypeXml:
 			err = ds.ConsumeXmlReader(reader)
-		case filesys.FileTypeJson:
+		case dbio.FileTypeJson:
 			err = ds.ConsumeJsonReader(reader)
 		}
 		if err != nil {

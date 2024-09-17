@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"runtime"
 	"sort"
@@ -173,8 +174,9 @@ func serve(c *g.CliSC) (ok bool, err error) {
 func conns(c *g.CliSC) (ok bool, err error) {
 	ok = true
 
+	entries := connection.GetLocalConns()
 	ef := env.LoadDbRestEnvFile(state.DefaultProject().EnvFile)
-	ec := connection.EnvConns{EnvFile: &ef}
+	ec := connection.EnvFileConns{EnvFile: &ef}
 
 	switch c.UsedSC() {
 	case "unset":
@@ -210,11 +212,12 @@ func conns(c *g.CliSC) (ok bool, err error) {
 		g.Info("connection `%s` has been set in %s. Please test with `dbrest conns test %s`", name, ec.EnvFile.Path, name)
 
 	case "list":
-		println(ec.List())
+		fields, rows := entries.List()
+		fmt.Println(g.PrettyTable(fields, rows))
 
 	case "test":
 		name := cast.ToString(c.Vals["name"])
-		ok, err = ec.Test(name)
+		ok, err = entries.Test(name)
 		if err != nil {
 			return ok, g.Error(err, "could not test %s", name)
 		} else if ok {

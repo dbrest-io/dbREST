@@ -3,7 +3,7 @@ package env
 import (
 	"os"
 
-	env "github.com/slingdata-io/sling-cli/core/dbio/env"
+	env "github.com/slingdata-io/sling-cli/core/env"
 )
 
 var (

@@ -171,7 +171,7 @@ func getSchemataTables(req Request) (resp Response, err error) {
 	resp = NewResponse(req)
 
 	rf := func(c database.Connection, req Request) (data iop.Dataset, err error) {
-		schemata, err := c.GetSchemata(req.Schema)
+		schemata, err := c.GetSchemata(database.SchemataLevelTable, req.Schema)
 		if err != nil {
 			err = g.Error(err, "could not get tables")
 			return
@@ -219,7 +219,7 @@ func getSchemataColumns(req Request) (resp Response, err error) {
 	resp = NewResponse(req)
 
 	rf := func(c database.Connection, req Request) (data iop.Dataset, err error) {
-		schemata, err := c.GetSchemata(req.Schema, req.Table)
+		schemata, err := c.GetSchemata(database.SchemataLevelColumn, req.Schema, req.Table)
 		if err != nil {
 			err = g.Error(err, "could not get columns")
 			return
