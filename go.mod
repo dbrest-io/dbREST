@@ -14,7 +14,7 @@ require (
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
 	github.com/labstack/echo/v5 v5.0.0-20230722203903-ec5b858dab61
 	github.com/samber/lo v1.39.0
-	github.com/slingdata-io/sling-cli v1.2.18
+	github.com/slingdata-io/sling-cli v1.2.21
 	github.com/spf13/cast v1.6.0
 	github.com/stretchr/testify v1.9.0
 	gopkg.in/yaml.v3 v3.0.1
