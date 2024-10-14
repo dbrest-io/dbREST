@@ -34,7 +34,7 @@ type Query struct {
 	Stream      *iop.Datastream     `json:"-" gorm:"-"`
 	Done        chan struct{}       `json:"-" gorm:"-"`
 	Error       error               `json:"-" gorm:"-"`
-	Context     g.Context           `json:"-" gorm:"-"`
+	Context     *g.Context          `json:"-" gorm:"-"`
 	lastTouch   time.Time           `json:"-" gorm:"-"`
 	IsGenerated bool                `json:"-" gorm:"-"`
 }

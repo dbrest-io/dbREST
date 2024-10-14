@@ -142,7 +142,7 @@ func (p *Project) TokenSave() (err error) {
 
 func NewToken(roles []string) Token {
 	return Token{
-		Token:    g.RandString(g.AplhanumericRunes, 64),
+		Token:    g.RandString(g.AlphaNumericRunes, 64),
 		Roles:    roles,
 		Disabled: false,
 		IssuedAt: time.Now(),
