@@ -152,12 +152,12 @@ func (r *Response) Make() (err error) {
 	case "text/plain", "text/csv":
 		r.Header.Set("Content-Type", "text/csv")
 		if r.ds != nil {
-			reader := r.ds.NewCsvReader(0, 0)
+			reader := r.ds.NewCsvReader(iop.DefaultStreamConfig())
 			b, _ := io.ReadAll(reader)
 			out = string(b)
 		} else if len(r.data.Columns) > 0 {
 			r.setHeaderColumns(r.data.Columns)
-			reader := r.data.Stream().NewCsvReader(0, 0)
+			reader := r.data.Stream().NewCsvReader(iop.DefaultStreamConfig())
 			b, _ := io.ReadAll(reader)
 			out = string(b)
 		}
