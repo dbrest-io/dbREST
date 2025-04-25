@@ -6,7 +6,7 @@ toolchain go1.22.5
 
 require (
 	github.com/denisbrodbeck/machineid v1.0.1
-	github.com/flarco/g v0.1.139
+	github.com/flarco/g v0.1.140
 	github.com/integrii/flaggy v1.5.2
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
 	github.com/jmoiron/sqlx v1.2.0
@@ -185,7 +185,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/slingdata-io/sling v0.0.0-20241011224356-e5fa1b3ebe3b // indirect
 	github.com/snowflakedb/gosnowflake v1.10.0 // indirect
-	github.com/timeplus-io/proton-go-driver/v2 v2.0.17 // indirect
+	github.com/timeplus-io/proton-go-driver/v2 v2.0.19 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/trinodb/trino-go-client v0.318.0 // indirect

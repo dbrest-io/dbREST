@@ -50,6 +50,30 @@ func getConnections(c echo.Context) (err error) {
 	return resp.Make()
 }
 
+func closeConnection(c echo.Context) (err error) {
+	req := NewRequest(c)
+	resp := NewResponse(req)
+
+	if err = req.Validate(reqCheckConnection); err != nil {
+		return ErrJSON(http.StatusBadRequest, err, "invalid request")
+	}
+
+	rf := func(c database.Connection, req Request) (data iop.Dataset, err error) {
+		err = c.Close()
+		return
+	}
+
+	resp.data, err = ProcessRequest(req, rf)
+	if err != nil {
+		return ErrJSON(http.StatusInternalServerError, err, "could not close connection")
+	}
+
+	// for middleware
+	req.echoCtx.Set("data", &resp.data)
+
+	return resp.Make()
+}
+
 func getConnectionDatabases(c echo.Context) (err error) {
 	req := NewRequest(c)
 	resp := NewResponse(req)

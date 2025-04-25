@@ -25,6 +25,12 @@ var StandardRoutes = []echo.Route{
 		Handler: getConnections,
 	},
 	{
+		Name:    "closeConnection",
+		Method:  "POST",
+		Path:    "/:connection/.close",
+		Handler: closeConnection,
+	},
+	{
 		Name:    "getConnectionDatabases",
 		Method:  "GET",
 		Path:    "/:connection/.databases",
