@@ -259,8 +259,7 @@ func (p *Project) GetConnInstance(connName, databaseName string) (conn database.
 	os.Setenv("USE_POOL", "TRUE")
 
 	// init connection
-	props := append(g.MapToKVArr(c.Props), g.MapToKVArr(connObj.DataS())...)
-	conn, err = database.NewConn(connObj.URL(), props...)
+	conn, err = connObj.AsDatabase(true)
 	if err != nil {
 		err = g.Error(err, "could not initialize database connection '%s' / '%s' with provided credentials/url.", connName, databaseName)
 		return
