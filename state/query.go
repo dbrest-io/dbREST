@@ -286,7 +286,8 @@ func (q *Query) isSelecting() bool {
 	for _, sql := range sqls {
 		normalizedSQL := strings.ToLower(strings.TrimSpace(sql))
 		if strings.HasPrefix(normalizedSQL, "select") ||
-			strings.HasPrefix(normalizedSQL, "with") {
+			strings.HasPrefix(normalizedSQL, "with") ||
+			(strings.Contains(normalizedSQL, "select") && strings.Contains(normalizedSQL, "from")) {
 			return true
 		}
 	}
