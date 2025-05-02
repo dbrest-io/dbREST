@@ -162,10 +162,9 @@ func (q *Query) Submit() (err error) {
 	q.Status = QueryStatusSubmitted
 	q.Context = g.NewContext(q.Connection.Context().Ctx)
 
-	g.Debug("--------------------------------------------------------------------- submitting %s", q.ID)
-
 	sqls := database.ParseSQLMultiStatements(q.Text)
-	if len(sqls) == 1 {
+	if len(sqls) == 1 && q.isSelecting() {
+		g.Debug("--------------------------------------------------------------------- submitting %s (selecting)", q.ID)
 		q.Stream, err = q.Connection.StreamRowsContext(q.Context.Ctx, q.Text, g.M("limit", q.Limit))
 		if err != nil {
 			setError(err)
@@ -175,6 +174,7 @@ func (q *Query) Submit() (err error) {
 
 		q.Status = QueryStatusCompleted
 	} else {
+		g.Debug("--------------------------------------------------------------------- submitting %s (executing)", q.ID)
 		_, err = q.Connection.NewTransaction(q.Context.Ctx)
 		if err != nil {
 			setError(err)
@@ -275,6 +275,23 @@ func (q *Query) processCustomReq() (err error) {
 		q.IsGenerated = true
 	}
 	return
+}
+
+// isSelecting detects whether a query is a SELECT query
+func (q *Query) isSelecting() bool {
+	// Parse the SQL statements
+	sqls := database.ParseSQLMultiStatements(q.Text)
+
+	// Check each statement
+	for _, sql := range sqls {
+		normalizedSQL := strings.ToLower(strings.TrimSpace(sql))
+		if strings.HasPrefix(normalizedSQL, "select") ||
+			strings.HasPrefix(normalizedSQL, "with") {
+			return true
+		}
+	}
+
+	return false
 }
 
 // Close closes and cancels the query
