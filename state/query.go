@@ -284,7 +284,17 @@ func (q *Query) isSelecting() bool {
 
 	// Check each statement
 	for _, sql := range sqls {
+		if t, err := database.TrimSQLComments(sql); err == nil {
+			sql = t
+		}
 		normalizedSQL := strings.ToLower(strings.TrimSpace(sql))
+		if strings.HasPrefix(normalizedSQL, "create") || strings.HasPrefix(normalizedSQL, "insert") ||
+			strings.HasPrefix(normalizedSQL, "update") || strings.HasPrefix(normalizedSQL, "delete") ||
+			strings.HasPrefix(normalizedSQL, "drop") || strings.HasPrefix(normalizedSQL, "alter") ||
+			strings.HasPrefix(normalizedSQL, "truncate") || strings.HasPrefix(normalizedSQL, "merge") ||
+			strings.HasPrefix(normalizedSQL, "grant") || strings.HasPrefix(normalizedSQL, "revoke") {
+			return false
+		}
 		if strings.HasPrefix(normalizedSQL, "select") ||
 			strings.HasPrefix(normalizedSQL, "with") ||
 			(strings.Contains(normalizedSQL, "select") && strings.Contains(normalizedSQL, "from")) {
