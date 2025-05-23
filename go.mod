@@ -6,7 +6,7 @@ toolchain go1.23.4
 
 require (
 	github.com/denisbrodbeck/machineid v1.0.1
-	github.com/flarco/g v0.1.142
+	github.com/flarco/g v0.1.145
 	github.com/integrii/flaggy v1.5.2
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
 	github.com/jmoiron/sqlx v1.2.0
@@ -14,8 +14,8 @@ require (
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
 	github.com/labstack/echo/v5 v5.0.0-20230722203903-ec5b858dab61
 	github.com/samber/lo v1.39.0
-	github.com/slingdata-io/sling-cli v1.4.6
-	github.com/spf13/cast v1.6.0
+	github.com/slingdata-io/sling-cli v1.4.8
+	github.com/spf13/cast v1.7.1
 	github.com/stretchr/testify v1.10.0
 	gopkg.in/yaml.v3 v3.0.1
 )
